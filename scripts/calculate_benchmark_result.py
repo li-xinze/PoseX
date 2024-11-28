@@ -39,8 +39,10 @@ def main(args: argparse.Namespace):
     docking_data = pd.read_csv(args.input_file)
     bust_dict = defaultdict(list)
 
+    total_samples = 0
     for pdb_ccd_id in docking_data["PDB_CCD_ID"]:
-        if args.model_type == "chai" and pdb_ccd_id in ["8FAV_4Y5"]:
+        if args.model_type == "chai" and pdb_ccd_id in ["8FAV_4Y5"]:  # For Chai, we skip 8FAV_4Y5 because it is not a valid molecule
+            total_samples += 1
             print(f"Skipping {pdb_ccd_id} for Chai")
             continue
         
@@ -58,9 +60,10 @@ def main(args: argparse.Namespace):
         bust_dict["mol_pred"].append(mol_pred)
         bust_dict["mol_true"].append(mol_true)
         bust_dict["mol_cond"].append(mol_cond)
+        total_samples += 1
 
     bust_data = pd.DataFrame(bust_dict)
-    print("Number of Benchmark Data: ", len(bust_data))
+    print("Number of Benchmark Data: ", total_samples)
     save_folder = os.path.dirname(args.input_file)
 
     # Calculate posebusters result
@@ -70,14 +73,14 @@ def main(args: argparse.Namespace):
     bust_results.to_csv(os.path.join(save_folder, f"posebusters_benchmark_result_{args.model_type}.csv"), index=False)
 
     # Calculate accuracy    
-    accuracy = len(bust_results[bust_results["rmsd_≤_2å"] == True]) / len(bust_results)
+    accuracy = len(bust_results[bust_results["rmsd_≤_2å"] == True]) / total_samples
     print(f"RMSD ≤ 2 Å: {accuracy * 100:.2f}%")
 
     # Calculate posebusters test result
     test_data = bust_results[POSEBUSTER_TEST_COLUMNS].copy()
     test_data.loc[:, "pb_valid"] = test_data.iloc[:, 1:].all(axis=1)
     valid_data = test_data[test_data["rmsd_≤_2å"] & test_data["pb_valid"]]
-    print(f"RMSD ≤ 2 Å and PB Valid: {len(valid_data) / len(bust_results) * 100:.2f}%")
+    print(f"RMSD ≤ 2 Å and PB Valid: {len(valid_data) / total_samples * 100:.2f}%")
 
 
 if __name__ == "__main__":
