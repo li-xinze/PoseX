@@ -17,15 +17,6 @@ from scipy.optimize import Bounds, minimize
 from tqdm.auto import tqdm
 
 
-POSEBUSTERS_INPUT_FILE = "data/microcyto/posebusters/posebusters_benchmark.csv"
-POSEBUSTERS_INPUT_FOLDER = "data/posebusters/posebusters_benchmark_set"
-ALPHAFOLD3_OUTPUT_FOLDER = "data/microcyto/posebusters/alphafold3/output"
-
-
-logging.basicConfig(format="[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s")
-logger = logging.getLogger(__name__)
-
-
 def load_receptor(input_path: str) -> Model:
     """Load a receptor from a given PDB filepath.
 
