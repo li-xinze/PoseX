@@ -1,6 +1,7 @@
 import argparse
 import os
-
+import glob
+import shutil
 import numpy as np
 import pandas as pd
 import prody
@@ -182,6 +183,99 @@ def extract_boltz_output(args: argparse.Namespace):
     print(f"Error Process Ligand IDs: {error_process_ligand_ids}")
 
 
+def extract_tankbind_output(args: argparse.Namespace):
+    docking_data = pd.read_csv(args.input_file)
+    print("Number of Posebusters Data: ", len(docking_data))
+    error_process_ligand_ids = []
+    for _, row in docking_data.iterrows():
+        print(f"Processing {row['PDB_CCD_ID']}")
+        pdb_ccd_id = row["PDB_CCD_ID"]
+        output_dir = os.path.join(args.output_folder, pdb_ccd_id)
+        os.makedirs(output_dir, exist_ok=True)
+        output_pdb_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_protein.pdb")
+        output_sdf_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_ligand.sdf")
+        try:
+            shutil.copy(row["PROTEIN_PDB_PATH"], output_pdb_path)
+            shutil.copy(f"{args.output_folder}/{pdb_ccd_id}_tankbind_chosen.sdf", output_sdf_path)
+        except Exception as e:
+            error_process_ligand_ids.append(pdb_ccd_id)
+            print(f"Error processing ligand for {pdb_ccd_id}: {e}")   
+
+    print(f"Number of Error Process Ligand IDs: {len(error_process_ligand_ids)}")
+    print(f"Error Process Ligand IDs: {error_process_ligand_ids}")
+
+
+def extract_dynamicbind_output(args: argparse.Namespace):
+    docking_data = pd.read_csv(args.input_file)
+    print("Number of Posebusters Data: ", len(docking_data))
+    error_process_ligand_ids = []
+    for _, row in docking_data.iterrows():
+        print(f"Processing {row['PDB_CCD_ID']}")
+        pdb_ccd_id = row["PDB_CCD_ID"]
+        output_dir = os.path.join(args.output_folder, pdb_ccd_id)
+        output_pdb_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_protein.pdb")
+        output_sdf_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_ligand.sdf")
+        try:
+            matching_protein_files = glob.glob(os.path.join(args.output_folder, pdb_ccd_id, "index0_idx_0", f"rank1_receptor*"))
+            matching_ligand_files = glob.glob(os.path.join(args.output_folder, pdb_ccd_id, "index0_idx_0", f"rank1_ligand*"))
+            assert len(matching_protein_files) == 1
+            assert len(matching_ligand_files) == 1
+            shutil.copy(matching_protein_files[0], output_pdb_path)
+            shutil.copy(matching_ligand_files[0], output_sdf_path)
+        except Exception as e:
+            error_process_ligand_ids.append(pdb_ccd_id)
+            print(f"Error processing ligand for {pdb_ccd_id}: {e}")   
+
+    print(f"Number of Error Process Ligand IDs: {len(error_process_ligand_ids)}")
+    print(f"Error Process Ligand IDs: {error_process_ligand_ids}")
+
+
+def extract_diffdock_output(args: argparse.Namespace):
+    docking_data = pd.read_csv(args.input_file)
+    print("Number of Posebusters Data: ", len(docking_data))
+    error_process_ligand_ids = []
+    for _, row in docking_data.iterrows():
+        print(f"Processing {row['PDB_CCD_ID']}")
+        pdb_ccd_id = row["PDB_CCD_ID"]
+        output_dir = os.path.join(args.output_folder, pdb_ccd_id)
+        os.makedirs(output_dir, exist_ok=True)
+        output_pdb_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_protein.pdb")
+        output_sdf_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_ligand.sdf")
+        try:
+            shutil.copy(row["PROTEIN_PDB_PATH"], output_pdb_path)
+            shutil.copy(f"{args.output_folder}/{pdb_ccd_id}/rank1.sdf", output_sdf_path)
+        except Exception as e:
+            error_process_ligand_ids.append(pdb_ccd_id)
+            print(f"Error processing ligand for {pdb_ccd_id}: {e}")   
+
+    print(f"Number of Error Process Ligand IDs: {len(error_process_ligand_ids)}")
+    print(f"Error Process Ligand IDs: {error_process_ligand_ids}")
+
+
+def extract_fabind_output(args: argparse.Namespace):
+    docking_data = pd.read_csv(args.input_file)
+    print("Number of Posebusters Data: ", len(docking_data))
+    error_process_ligand_ids = []
+    for _, row in docking_data.iterrows():
+        print(f"Processing {row['PDB_CCD_ID']}")
+        pdb_ccd_id = row["PDB_CCD_ID"]
+        output_dir = os.path.join(args.output_folder, pdb_ccd_id)
+        os.makedirs(output_dir, exist_ok=True)
+        output_pdb_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_protein.pdb")
+        output_sdf_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_ligand.sdf")
+        shutil.copy(row["PROTEIN_PDB_PATH"], output_pdb_path)
+        try:
+            matching_files = glob.glob(os.path.join(args.output_folder, f'{pdb_ccd_id}_*'))
+            assert len(matching_files) == 1
+            shutil.copy(matching_files[0], output_sdf_path)
+        except Exception as e:
+            error_process_ligand_ids.append(pdb_ccd_id)
+            print(f"Error processing ligand for {pdb_ccd_id}: {e}")   
+
+    print(f"Number of Error Process Ligand IDs: {len(error_process_ligand_ids)}")
+    print(f"Error Process Ligand IDs: {error_process_ligand_ids}")
+
+
 def main(args: argparse.Namespace):
     if args.model_type == "alphafold3":
         extract_alphafold3_output(args)
@@ -189,6 +283,14 @@ def main(args: argparse.Namespace):
         extract_chai_output(args)
     elif args.model_type == "boltz":
         extract_boltz_output(args)
+    elif args.model_type == "tankbind":
+        extract_tankbind_output(args)
+    elif args.model_type in ["diffdock", "diffdock_l"]:
+        extract_diffdock_output(args)
+    elif args.model_type == "fabind":
+        extract_fabind_output(args)
+    elif args.model_type == "dynamicbind":
+        extract_dynamicbind_output(args)
     else:
         raise ValueError(f"Unsupported model type: {args.model_type}")
 

@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import shutil
 import string
 
 import pandas as pd
@@ -111,6 +112,50 @@ def generate_boltz_input(args: argparse.Namespace):
             yaml.dump(task_dict, f)
 
 
+def generate_dynamicbind_input(args: argparse.Namespace):
+    """Generate DynaimcBind input for a given docking data."""
+
+    docking_data = pd.read_csv(args.input_file)    
+    for _, row in tqdm(docking_data.iterrows(), total=len(docking_data)):
+        ligand_path = os.path.join(args.output_folder, f"{row['PDB_CCD_ID']}.csv")
+        protein_path = os.path.join(args.output_folder, f"{row['PDB_CCD_ID']}.pdb")
+        with open(ligand_path, "w") as f:
+            f.write("ligand\n")
+            f.write(f"{row['LIGAND_SMILES']}\n")
+        shutil.copy(row['PROTEIN_PDB_PATH'], protein_path)
+
+
+def generate_tankbind_input(args: argparse.Namespace):
+    """Generate TankBind input for a given docking data."""
+
+    docking_data = pd.read_csv(args.input_file)    
+    input_data = docking_data[["PDB_CCD_ID", "PROTEIN_PDB_PATH", "LIGAND_SDF_PATH"]]
+    input_data.to_csv(f"{args.output_folder}/data.csv", index=False)
+
+
+def generate_diffdock_input(args: argparse.Namespace):
+    """Generate DiffD input for a given docking data."""
+
+    docking_data = pd.read_csv(args.input_file)    
+    input_data = docking_data[["PDB_CCD_ID", "PROTEIN_PDB_PATH", "PROTEIN_SEQUENCE", "LIGAND_SMILES"]].copy()
+    input_data.columns = ["complex_name", "protein_path", "protein_sequence", "ligand_description"]
+    input_data["protein_path"] = input_data["protein_path"].apply(os.path.abspath)
+    input_data.to_csv(f"{args.output_folder}/data.csv", index=False)
+
+
+def generate_fabind_input(args: argparse.Namespace):
+    """Generate FABind input for a given docking data."""
+
+    docking_data = pd.read_csv(args.input_file)    
+    input_data = docking_data[["LIGAND_SMILES", "PDB_CCD_ID"]]
+    input_data.to_csv(f"{args.output_folder}/ligand.csv", index=False)
+    protein_dir = os.path.join(args.output_folder, "protein")
+    os.makedirs(protein_dir, exist_ok=True)
+    for _, row in tqdm(docking_data.iterrows(), total=len(docking_data)):
+        protein_path = os.path.join(protein_dir, f"{row['PDB_CCD_ID']}.pdb")
+        shutil.copy(row['PROTEIN_PDB_PATH'], protein_path)
+
+
 def main(args: argparse.Namespace):
     os.makedirs(args.output_folder, exist_ok=True)
     print(f"Saving {args.model_type} input to {args.output_folder}")
@@ -121,6 +166,14 @@ def main(args: argparse.Namespace):
         generate_chai_input(args)
     elif args.model_type == "boltz":
         generate_boltz_input(args)
+    elif args.model_type == "dynamicbind":
+        generate_dynamicbind_input(args)
+    elif args.model_type == "tankbind":
+        generate_tankbind_input(args)
+    elif args.model_type in ["diffdock", "diffdock_l"]:
+        generate_diffdock_input(args)
+    elif args.model_type == "fabind":
+        generate_fabind_input(args)
     else:
         raise ValueError(f"Unsupported model type: {args.model_type}")
 

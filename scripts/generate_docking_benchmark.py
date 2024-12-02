@@ -141,22 +141,27 @@ def generate_posebusters_benchmark(args: argparse.Namespace):
     docking_data = docking_data[~docking_data["PDB_CCD_ID"].isin(["8F4J_PHO", "7SUC_COM"])]
     print("Number of Filtered Posebusters Data:", len(docking_data))
 
-    molecule_smiles_list, protein_sequence_list = [], []
+    molecule_smiles_list, protein_sequence_list, pdb_path_list, sdf_path_list = [], [], [], []
     for pdb_ccd_id in docking_data["PDB_CCD_ID"]:
         data_folder = os.path.join(args.input_folder, f"posebusters_benchmark_set/{pdb_ccd_id}")
         
         # Get the SMILES of the ligand
-        molecule_smiles = get_molecule_smiles(os.path.join(data_folder, f"{pdb_ccd_id}_ligand.sdf"))
+        ligand_file = os.path.join(data_folder, f"{pdb_ccd_id}_ligand.sdf")
+        sdf_path_list.append(ligand_file)
+        molecule_smiles = get_molecule_smiles(ligand_file)
         molecule_smiles_list.append(molecule_smiles)
 
         # Get the protein sequences
         protein_file = os.path.join(data_folder, f"{pdb_ccd_id}_protein.pdb")
+        pdb_path_list.append(protein_file)
         protein_sequences = "|".join([seq for seq in get_protein_sequences(protein_file) if len(seq) > 0])
         protein_sequence_list.append(protein_sequences)
 
     docking_data["LIGAND_SMILES"] = molecule_smiles_list
     docking_data["PROTEIN_SEQUENCE"] = protein_sequence_list
-
+    docking_data["PROTEIN_PDB_PATH"] = pdb_path_list
+    docking_data["LIGAND_SDF_PATH"] = sdf_path_list
+ 
     # Save the filtered data to a CSV file
     if not os.path.exists(args.output_folder):
         os.makedirs(args.output_folder)
@@ -179,7 +184,7 @@ def generate_astex_benchmark(args: argparse.Namespace):
     release_dates = [get_pdb_release_date(pdb_id) for pdb_id in tqdm(pdb_ids, desc="Getting Release Dates")]
     docking_data = pd.DataFrame({"PDB_CCD_ID": pdb_ccd_ids, "PDB_ID": pdb_ids, "CCD_ID": ccd_ids, "RELEASE_DATE": release_dates})
 
-    pdb_ccd_ids, molecule_smiles_list, protein_sequence_list = [], [], []
+    pdb_ccd_ids, molecule_smiles_list, protein_sequence_list, pdb_path_list, sdf_path_list = [], [], [], [], []
     for pdb_ccd_id in docking_data["PDB_CCD_ID"]:
         data_folder = os.path.join(args.input_folder, f"astex_diverse_set/{pdb_ccd_id}")
 
@@ -193,9 +198,11 @@ def generate_astex_benchmark(args: argparse.Namespace):
             print(f"Warning: {pdb_ccd_id} has a protein sequence containing a dash (i.e., `-`). Skipping this data.")
             continue
 
+
         # Get the SMILES of the ligand
         try:
-            molecule_smiles = get_molecule_smiles(os.path.join(data_folder, f"{pdb_ccd_id}_ligand.sdf"))
+            ligand_file = os.path.join(data_folder, f"{pdb_ccd_id}_ligand.sdf")
+            molecule_smiles = get_molecule_smiles(ligand_file)
         except Exception as e:
             print(f"Warning: {pdb_ccd_id} has an error when getting the SMILES of the ligand. Skipping this data.")
             continue
@@ -204,10 +211,14 @@ def generate_astex_benchmark(args: argparse.Namespace):
         pdb_ccd_ids.append(pdb_ccd_id)
         molecule_smiles_list.append(molecule_smiles)
         protein_sequence_list.append(protein_sequences)
+        pdb_path_list.append(protein_file)
+        sdf_path_list.append(ligand_file)
 
     docking_data = docking_data[docking_data["PDB_CCD_ID"].isin(pdb_ccd_ids)].copy()
     docking_data["LIGAND_SMILES"] = molecule_smiles_list
     docking_data["PROTEIN_SEQUENCE"] = protein_sequence_list
+    docking_data["PROTEIN_PDB_PATH"] = pdb_path_list
+    docking_data["LIGAND_SDF_PATH"] = sdf_path_list
     print("Number of Filtered Astex Data:", len(docking_data))
 
     # Save the filtered data to a CSV file
