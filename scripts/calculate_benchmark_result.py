@@ -45,7 +45,11 @@ def main(args: argparse.Namespace):
             total_samples += 1
             print(f"Skipping {pdb_ccd_id} for Chai")
             continue
-        
+        if args.model_type == "boltz" and pdb_ccd_id in ["7F8T_FAD"]:  # For Boltz, we skip 7F8T_FAD because it is not a valid molecule
+            total_samples += 1
+            print(f"Skipping {pdb_ccd_id} for Boltz")
+            continue
+
         mol_true = os.path.join(args.dataset_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_ligands.sdf")
         mol_cond = os.path.join(args.dataset_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_protein.pdb")
 
@@ -70,7 +74,7 @@ def main(args: argparse.Namespace):
     buster = PoseBusters(config="redock", top_n=None)
     bust_results = buster.bust_table(bust_data, full_report=True)
     bust_results["PDB_CCD_ID"] = bust_dict["PDB_CCD_ID"]
-    bust_results.to_csv(os.path.join(save_folder, f"posebusters_benchmark_result_{args.model_type}.csv"), index=False)
+    bust_results.to_csv(os.path.join(save_folder, f"{args.dataset}_benchmark_result_{args.model_type}.csv"), index=False)
 
     # Calculate accuracy    
     accuracy = len(bust_results[bust_results["rmsd_≤_2å"] == True]) / total_samples
@@ -88,6 +92,7 @@ if __name__ == "__main__":
     parser.add_argument("--input_file", type=str, required=True, help="Path to the benchmark input file")
     parser.add_argument("--dataset_folder", type=str, required=True, help="Path to the dataset folder")
     parser.add_argument("--model_output_folder", type=str, required=True, help="Path to the model output folder")
+    parser.add_argument("--dataset", type=str, required=True, help="Dataset name")
     parser.add_argument("--model_type", type=str, required=True, help="Model type")
     args = parser.parse_args()
 

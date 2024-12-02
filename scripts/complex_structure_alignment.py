@@ -257,7 +257,7 @@ def run_structure_alignment(predicted_protein_pdb: str, predicted_ligand_sdf: Op
     assert reference_ligand is not None, "Reference ligand after loading is None"
 
     # Extract CA coordinates
-    if model_type == "chai":
+    if model_type != "alphafold3":
         predicted_ca_coords = extract_complex_structure(predicted_receptor, reference_ligand, filter_hetero_residues=False)["ca_coords"]
         reference_ca_coords = extract_complex_structure(reference_receptor, reference_ligand, filter_hetero_residues=False)["ca_coords"]
     else:

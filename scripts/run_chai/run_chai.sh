@@ -1,8 +1,18 @@
 #! /bin/bash
 
-CHAI_INPUT_FOLDER="data/microcyto/posebusters/chai/input"
-CHAI_OUTPUT_FOLDER="data/microcyto/posebusters/chai/output"
-GPU_ID=3
+
+# Check if model type is provided as argument
+if [ $# -eq 0 ]; then
+    echo "Error: Please provide dataset as argument"
+    echo "Usage: $0 <dataset>"
+    exit 1
+fi
+
+DATASET="$1"
+
+CHAI_INPUT_FOLDER="data/microcyto/${DATASET}/chai/input"
+CHAI_OUTPUT_FOLDER="data/microcyto/${DATASET}/chai/output"
+GPU_ID=2
 
 # init conda
 eval "$(conda shell.bash hook)"

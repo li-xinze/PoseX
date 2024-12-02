@@ -1,7 +1,17 @@
 #! /bin/bash
 
-BOLTZ_INPUT_FOLDER="data/microcyto/posebusters/blotz/input"
-BOLTZ_OUTPUT_FOLDER="data/microcyto/posebusters/blotz/output"
+
+# Check if model type is provided as argument
+if [ $# -eq 0 ]; then
+    echo "Error: Please provide dataset as argument"
+    echo "Usage: $0 <dataset>"
+    exit 1
+fi
+
+DATASET="$1"
+
+BOLTZ_INPUT_FOLDER="data/microcyto/${DATASET}/boltz/input"
+BOLTZ_OUTPUT_FOLDER="data/microcyto/${DATASET}/boltz/output"
 GPU_ID=3
 
 # init conda

@@ -121,7 +121,8 @@ def get_protein_sequences(input_file: str) -> List[str]:
     return protein_sequences
 
 
-def main(args: argparse.Namespace):
+def generate_posebusters_benchmark(args: argparse.Namespace):
+    """Generate the Posebusters benchmark"""
     pdb_ccd_ids, pdb_ids, ccd_ids = [], [], []
     with open(os.path.join(args.input_folder, "posebusters_pdb_ccd_ids.txt"), "r") as f:
         for line in f:
@@ -163,10 +164,74 @@ def main(args: argparse.Namespace):
     print("Saved Posebusters Benchmark to ", os.path.join(args.output_folder, "posebusters_benchmark.csv"))
 
 
+def generate_astex_benchmark(args: argparse.Namespace):
+    """Generate the AsteX benchmark"""
+    pdb_ccd_ids, pdb_ids, ccd_ids = [], [], []
+    with open(os.path.join(args.input_folder, "astex_diverse_set_ids.txt"), "r") as f:
+        for line in f:
+            line = line.strip()
+            pdb_ccd_ids.append(line)
+            pdb_ids.append(line.split("_")[0])
+            ccd_ids.append(line.split("_")[1])
+    print("Number of Raw Astex Data:", len(pdb_ccd_ids))
+
+    # Get the release dates of the PDB entries
+    release_dates = [get_pdb_release_date(pdb_id) for pdb_id in tqdm(pdb_ids, desc="Getting Release Dates")]
+    docking_data = pd.DataFrame({"PDB_CCD_ID": pdb_ccd_ids, "PDB_ID": pdb_ids, "CCD_ID": ccd_ids, "RELEASE_DATE": release_dates})
+
+    pdb_ccd_ids, molecule_smiles_list, protein_sequence_list = [], [], []
+    for pdb_ccd_id in docking_data["PDB_CCD_ID"]:
+        data_folder = os.path.join(args.input_folder, f"astex_diverse_set/{pdb_ccd_id}")
+
+        # Get the protein sequences
+        protein_file = os.path.join(data_folder, f"{pdb_ccd_id}_protein.pdb")
+        protein_sequences = "|".join([seq for seq in get_protein_sequences(protein_file) if len(seq) > 0])
+        if len(protein_sequences) > 2500:
+            print(f"Warning: {pdb_ccd_id} has a protein sequence length of {len(protein_sequences)}, which is longer than 2500. Skipping this data.")
+            continue
+        if "-" in protein_sequences:
+            print(f"Warning: {pdb_ccd_id} has a protein sequence containing a dash (i.e., `-`). Skipping this data.")
+            continue
+
+        # Get the SMILES of the ligand
+        try:
+            molecule_smiles = get_molecule_smiles(os.path.join(data_folder, f"{pdb_ccd_id}_ligand.sdf"))
+        except Exception as e:
+            print(f"Warning: {pdb_ccd_id} has an error when getting the SMILES of the ligand. Skipping this data.")
+            continue
+        
+        # Append the data
+        pdb_ccd_ids.append(pdb_ccd_id)
+        molecule_smiles_list.append(molecule_smiles)
+        protein_sequence_list.append(protein_sequences)
+
+    docking_data = docking_data[docking_data["PDB_CCD_ID"].isin(pdb_ccd_ids)].copy()
+    docking_data["LIGAND_SMILES"] = molecule_smiles_list
+    docking_data["PROTEIN_SEQUENCE"] = protein_sequence_list
+    print("Number of Filtered Astex Data:", len(docking_data))
+
+    # Save the filtered data to a CSV file
+    if not os.path.exists(args.output_folder):
+        os.makedirs(args.output_folder)
+    docking_data.to_csv(os.path.join(args.output_folder, "astex_benchmark.csv"), index=False)
+    print("Saved Astex Benchmark to ", os.path.join(args.output_folder, "astex_benchmark.csv"))
+
+
+def main(args: argparse.Namespace):
+    if args.dataset == "posebusters":
+        generate_posebusters_benchmark(args)
+    elif args.dataset == "astex":
+        generate_astex_benchmark(args)
+    else:
+        raise ValueError(f"Unknown dataset: {args.dataset}")
+
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_folder", type=str, required=True, help="Path to the input folder containing the Posebusters dataset")
     parser.add_argument("--output_folder", type=str, required=True, help="Path to the output folder")
+    parser.add_argument("--dataset", type=str, required=True, help="Dataset type")
     args = parser.parse_args()
 
     main(args)

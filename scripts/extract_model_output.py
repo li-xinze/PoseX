@@ -10,9 +10,40 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 
 
+
+def convert_ligand_pdb_to_sdf(model_output_folder: str, pdb_ccd_id: str, ligand_smiles: str) -> bool:
+    """Convert the ligand PDB to SDF
+
+    Args:
+        model_output_folder (str): Path to the model output folder
+        pdb_ccd_id (str): PDB_CCD_ID
+        ligand_smiles (str): Ligand SMILES
+
+    Returns:
+        bool: Whether the conversion is successful
+    """
+    convert_success = True
+
+    mol = Chem.MolFromPDBFile(os.path.join(model_output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.pdb"), sanitize=False)
+    try:
+        template = AllChem.MolFromSmiles(ligand_smiles)
+        mol = AllChem.AssignBondOrdersFromTemplate(template, mol)
+    except Exception as e:
+        mol = Chem.MolFromPDBFile(os.path.join(model_output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.pdb"), sanitize=False)
+        convert_success = False
+        print(f"Error processing ligand for {pdb_ccd_id}: {e}")
+    writer = Chem.SDWriter(os.path.join(model_output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.sdf"))
+    writer.write(mol)
+    writer.close()
+
+    return convert_success
+
+
 def extract_alphafold3_output(args: argparse.Namespace):
     docking_data = pd.read_csv(args.input_file)
     print("Number of Posebusters Data: ", len(docking_data))
+
+    error_process_ligand_ids = []
 
     for _, row in docking_data.iterrows():
         print(f"Processing {row['PDB_CCD_ID']}")
@@ -39,12 +70,14 @@ def extract_alphafold3_output(args: argparse.Namespace):
             f.write(content)
 
         # Convert the ligand PDB to SDF
-        mol = Chem.MolFromPDBFile(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.pdb"), sanitize=False)
-        template = AllChem.MolFromSmiles(ligand_smiles)
-        mol = AllChem.AssignBondOrdersFromTemplate(template, mol)
-        writer = Chem.SDWriter(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.sdf"))
-        writer.write(mol)
-        writer.close()
+        convert_success = convert_ligand_pdb_to_sdf(args.output_folder, pdb_ccd_id, ligand_smiles)
+        if not convert_success:
+            print(f"Error processing ligand for {pdb_ccd_id}")
+            error_process_ligand_ids.append(pdb_ccd_id)
+            continue
+
+    print(f"Number of Error Process Ligand IDs: {len(error_process_ligand_ids)}")
+    print(f"Error Process Ligand IDs: {error_process_ligand_ids}")
 
 
 def extract_chai_output(args: argparse.Namespace):
@@ -94,17 +127,56 @@ def extract_chai_output(args: argparse.Namespace):
         prody.writePDB(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.pdb"), ligand)
 
         # Convert the ligand PDB to SDF
-        mol = Chem.MolFromPDBFile(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.pdb"), sanitize=False)
-        try:
-            template = AllChem.MolFromSmiles(ligand_smiles)
-            mol = AllChem.AssignBondOrdersFromTemplate(template, mol)
-        except Exception as e:
-            mol = Chem.MolFromPDBFile(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.pdb"), sanitize=False)
+        convert_success = convert_ligand_pdb_to_sdf(args.output_folder, pdb_ccd_id, ligand_smiles)
+        if not convert_success:
+            print(f"Error processing ligand for {pdb_ccd_id}")
             error_process_ligand_ids.append(pdb_ccd_id)
-            print(f"Error processing ligand for {pdb_ccd_id}: {e}")
-        writer = Chem.SDWriter(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.sdf"))
-        writer.write(mol)
-        writer.close()
+            continue
+
+    print(f"Number of Error Process Ligand IDs: {len(error_process_ligand_ids)}")
+    print(f"Error Process Ligand IDs: {error_process_ligand_ids}")
+
+
+def extract_boltz_output(args: argparse.Namespace):
+    docking_data = pd.read_csv(args.input_file)
+    print("Number of Posebusters Data: ", len(docking_data))
+
+    error_process_ligand_ids = []
+
+    for _, row in docking_data.iterrows():
+        print(f"Processing {row['PDB_CCD_ID']}")
+        pdb_ccd_id = row["PDB_CCD_ID"]
+        ligand_smiles = row["LIGAND_SMILES"]
+
+        if not os.path.exists(os.path.join(args.output_folder, f"{pdb_ccd_id}")):
+            print(f"Directory {pdb_ccd_id} does not exist")
+            continue
+
+        cif_path = os.path.join(args.output_folder, f"{pdb_ccd_id}/boltz_results_{pdb_ccd_id}/predictions/{pdb_ccd_id}/{pdb_ccd_id}_model_0.cif")
+        if not os.path.exists(cif_path):
+            print(f"CIF file {cif_path} does not exist")
+            continue
+
+        parser = MMCIFParser()
+        structure = parser.get_structure(pdb_ccd_id, cif_path)
+        pdb_io = PDBIO()
+        pdb_io.set_structure(structure)
+        pdb_io.save(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model.pdb"))
+
+        # Parse the PDBFile
+        pdb = prody.parsePDB(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model.pdb"))
+        protein = pdb.select("protein")
+        ligand = pdb.select("not (protein or nucleotide or water)")
+
+        prody.writePDB(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_protein.pdb"), protein)
+        prody.writePDB(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.pdb"), ligand)
+
+        # Convert the ligand PDB to SDF
+        convert_success = convert_ligand_pdb_to_sdf(args.output_folder, pdb_ccd_id, ligand_smiles)
+        if not convert_success:
+            print(f"Error processing ligand for {pdb_ccd_id}")
+            error_process_ligand_ids.append(pdb_ccd_id)
+            continue
 
     print(f"Number of Error Process Ligand IDs: {len(error_process_ligand_ids)}")
     print(f"Error Process Ligand IDs: {error_process_ligand_ids}")
@@ -115,6 +187,8 @@ def main(args: argparse.Namespace):
         extract_alphafold3_output(args)
     elif args.model_type == "chai":
         extract_chai_output(args)
+    elif args.model_type == "boltz":
+        extract_boltz_output(args)
     else:
         raise ValueError(f"Unsupported model type: {args.model_type}")
 
@@ -122,7 +196,7 @@ def main(args: argparse.Namespace):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_file", type=str, required=True, help="Path to the benchmark input file")
-    parser.add_argument("--output_folder", type=str, required=True, help="Path to the alphafold3 output folder")
+    parser.add_argument("--output_folder", type=str, required=True, help="Path to the model output folder")
     parser.add_argument("--model_type", type=str, required=True, help="Model type")
     args = parser.parse_args()
     

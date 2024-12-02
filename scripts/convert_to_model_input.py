@@ -75,8 +75,8 @@ def generate_chai_input(args: argparse.Namespace):
             f.write(fasta_string)
 
 
-def generate_blotz_input(args: argparse.Namespace):
-    """Generate Blotz input for a given docking data."""
+def generate_boltz_input(args: argparse.Namespace):
+    """Generate Boltz input for a given docking data."""
 
     docking_data = pd.read_csv(args.input_file)    
     for _, row in tqdm(docking_data.iterrows(), total=len(docking_data)):
@@ -119,8 +119,8 @@ def main(args: argparse.Namespace):
         generate_alphafold3_input(args)
     elif args.model_type == "chai":
         generate_chai_input(args)
-    elif args.model_type == "blotz":
-        generate_blotz_input(args)
+    elif args.model_type == "boltz":
+        generate_boltz_input(args)
     else:
         raise ValueError(f"Unsupported model type: {args.model_type}")
 
