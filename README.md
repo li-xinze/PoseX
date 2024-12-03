@@ -14,8 +14,10 @@ This project provides a complete pipeline for:
 ## Directory Structure
 ```plaintext
 .
-├── data    # Data directory (gitignored)
+├── data     # Data directory (gitignored)
 │   ├── microcyto      # Processed benchmark data
+│   │   ├── astex
+│   │   └── posebusters
 │   └── posebusters    # Raw PoseBusters dataset
 ├── environments    # Environment configuration files
 └── scripts
