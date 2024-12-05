@@ -1,8 +1,8 @@
 import argparse
 import os
-import requests
 from typing import List, Optional
 
+import requests
 import pandas as pd
 from Bio.PDB import PDBParser
 from rdkit import Chem
