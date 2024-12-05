@@ -72,6 +72,7 @@ def main(args: argparse.Namespace):
 
     # Calculate posebusters result
     buster = PoseBusters(config="redock", top_n=None)
+    buster.config["loading"]["mol_true"]["load_all"] = False
     bust_results = buster.bust_table(bust_data, full_report=True)
     bust_results["PDB_CCD_ID"] = bust_dict["PDB_CCD_ID"]
     bust_results.to_csv(os.path.join(save_folder, f"{args.dataset}_benchmark_result_{args.model_type}.csv"), index=False)

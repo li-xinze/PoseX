@@ -23,26 +23,30 @@ def convert_ligand_pdb_to_sdf(model_output_folder: str, pdb_ccd_id: str, ligand_
     Returns:
         bool: Whether the conversion is successful
     """
-    convert_success = True
-
     mol = Chem.MolFromPDBFile(os.path.join(model_output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.pdb"), sanitize=False)
     try:
         template = AllChem.MolFromSmiles(ligand_smiles)
         mol = AllChem.AssignBondOrdersFromTemplate(template, mol)
     except Exception as e:
         mol = Chem.MolFromPDBFile(os.path.join(model_output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.pdb"), sanitize=False)
-        convert_success = False
-        print(f"Error processing ligand for {pdb_ccd_id}: {e}")
+        print(f"Error assigning bond orders for ligand {pdb_ccd_id}: {e}")
+    
+    try:
+        test_mol = Chem.Mol(mol)
+        Chem.SanitizeMol(test_mol)
+    except Exception as e:
+        print(f"Sanitization failed for ligand {pdb_ccd_id}: {e}")
+        return False
+
     writer = Chem.SDWriter(os.path.join(model_output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.sdf"))
     writer.write(mol)
     writer.close()
-
-    return convert_success
+    return True
 
 
 def extract_alphafold3_output(args: argparse.Namespace):
     docking_data = pd.read_csv(args.input_file)
-    print("Number of Posebusters Data: ", len(docking_data))
+    print("Number of Benchmark Data: ", len(docking_data))
 
     error_process_ligand_ids = []
 
@@ -83,7 +87,7 @@ def extract_alphafold3_output(args: argparse.Namespace):
 
 def extract_chai_output(args: argparse.Namespace):
     docking_data = pd.read_csv(args.input_file)
-    print("Number of Posebusters Data: ", len(docking_data))
+    print("Number of Benchmark Data: ", len(docking_data))
 
     error_process_ligand_ids = []
 
@@ -140,7 +144,7 @@ def extract_chai_output(args: argparse.Namespace):
 
 def extract_boltz_output(args: argparse.Namespace):
     docking_data = pd.read_csv(args.input_file)
-    print("Number of Posebusters Data: ", len(docking_data))
+    print("Number of Benchmark Data: ", len(docking_data))
 
     error_process_ligand_ids = []
 
@@ -183,9 +187,48 @@ def extract_boltz_output(args: argparse.Namespace):
     print(f"Error Process Ligand IDs: {error_process_ligand_ids}")
 
 
+def extract_rfaa_output(args: argparse.Namespace):
+    docking_data = pd.read_csv(args.input_file)
+    print("Number of Benchmark Data: ", len(docking_data))
+
+    error_process_ligand_ids = []
+    
+    for _, row in docking_data.iterrows():
+        print(f"Processing {row['PDB_CCD_ID']}")
+        pdb_ccd_id = row["PDB_CCD_ID"]
+        ligand_smiles = row["LIGAND_SMILES"]
+
+        if not os.path.exists(os.path.join(args.output_folder, f"{pdb_ccd_id}")):
+            print(f"Directory {pdb_ccd_id} does not exist")
+            continue
+
+        pdb_path = os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}.pdb")
+        if not os.path.exists(pdb_path):
+            print(f"PDB file {pdb_path} does not exist")
+            continue
+
+        # Parse the PDBFile
+        pdb = prody.parsePDB(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}.pdb"))
+        protein = pdb.select("protein")
+        ligand = pdb.select("not (protein or nucleotide or water)")
+
+        prody.writePDB(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_protein.pdb"), protein)
+        prody.writePDB(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.pdb"), ligand)
+
+        # Convert the ligand PDB to SDF
+        convert_success = convert_ligand_pdb_to_sdf(args.output_folder, pdb_ccd_id, ligand_smiles)
+        if not convert_success:
+            print(f"Error processing ligand for {pdb_ccd_id}")
+            error_process_ligand_ids.append(pdb_ccd_id)
+            continue
+
+    print(f"Number of Error Process Ligand IDs: {len(error_process_ligand_ids)}")
+    print(f"Error Process Ligand IDs: {error_process_ligand_ids}")
+
+
 def extract_tankbind_output(args: argparse.Namespace):
     docking_data = pd.read_csv(args.input_file)
-    print("Number of Posebusters Data: ", len(docking_data))
+    print("Number of Benchmark Data: ", len(docking_data))
     error_process_ligand_ids = []
     for _, row in docking_data.iterrows():
         print(f"Processing {row['PDB_CCD_ID']}")
@@ -207,7 +250,7 @@ def extract_tankbind_output(args: argparse.Namespace):
 
 def extract_dynamicbind_output(args: argparse.Namespace):
     docking_data = pd.read_csv(args.input_file)
-    print("Number of Posebusters Data: ", len(docking_data))
+    print("Number of Benchmark Data: ", len(docking_data))
     error_process_ligand_ids = []
     for _, row in docking_data.iterrows():
         print(f"Processing {row['PDB_CCD_ID']}")
@@ -232,7 +275,7 @@ def extract_dynamicbind_output(args: argparse.Namespace):
 
 def extract_diffdock_output(args: argparse.Namespace):
     docking_data = pd.read_csv(args.input_file)
-    print("Number of Posebusters Data: ", len(docking_data))
+    print("Number of Benchmark Data: ", len(docking_data))
     error_process_ligand_ids = []
     for _, row in docking_data.iterrows():
         print(f"Processing {row['PDB_CCD_ID']}")
@@ -254,7 +297,7 @@ def extract_diffdock_output(args: argparse.Namespace):
 
 def extract_fabind_output(args: argparse.Namespace):
     docking_data = pd.read_csv(args.input_file)
-    print("Number of Posebusters Data: ", len(docking_data))
+    print("Number of Benchmark Data: ", len(docking_data))
     error_process_ligand_ids = []
     for _, row in docking_data.iterrows():
         print(f"Processing {row['PDB_CCD_ID']}")
@@ -283,6 +326,8 @@ def main(args: argparse.Namespace):
         extract_chai_output(args)
     elif args.model_type == "boltz":
         extract_boltz_output(args)
+    elif args.model_type == "rfaa":
+        extract_rfaa_output(args)
     elif args.model_type == "tankbind":
         extract_tankbind_output(args)
     elif args.model_type in ["diffdock", "diffdock_l"]:

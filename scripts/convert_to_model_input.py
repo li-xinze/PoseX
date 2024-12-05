@@ -112,6 +112,41 @@ def generate_boltz_input(args: argparse.Namespace):
             yaml.dump(task_dict, f)
 
 
+def generate_rfaa_input(args: argparse.Namespace):
+    """Generate RoseTTAFold-All-Atom input for a given docking data."""
+    
+    docking_data = pd.read_csv(args.input_file)
+    for _, row in tqdm(docking_data.iterrows(), total=len(docking_data)):
+        task_dict = {"defaults": ["base"], 
+                     "job_name": row["PDB_CCD_ID"], 
+                     "output_path": f"./predictions/{row['PDB_CCD_ID']}",
+                     "protein_inputs": {},
+                     "sm_inputs": {}}
+
+        protein_sequences = row["PROTEIN_SEQUENCE"].split("|")
+        # Skip if there are more than 20 chains
+        if len(protein_sequences) > 20:
+            print(f"Skipping {row['PDB_CCD_ID']} because it has more than 20 chains")
+            continue
+
+        # Add the protein sequences
+        for sequence_idx, protein_sequence in enumerate(protein_sequences):
+            chain_id = string.ascii_uppercase[sequence_idx]
+            fasta_string = f">{row['PDB_CCD_ID']}|{chain_id}\n{protein_sequence}\n"
+            fasta_path = os.path.join(args.output_folder, f"{row['PDB_CCD_ID']}_{chain_id}.fasta")
+            with open(fasta_path, "w") as f:
+                f.write(fasta_string)
+            task_dict["protein_inputs"][chain_id] = {"fasta_file": os.path.abspath(fasta_path)}
+
+        # Add the ligand
+        task_dict["sm_inputs"]["Z"] = {"input": os.path.abspath(row["LIGAND_SDF_PATH"]), "input_type": "sdf"}
+
+        # Save the task dict
+        output_path = os.path.join(args.output_folder, f"{row['PDB_CCD_ID']}.yaml")
+        with open(output_path, "w") as f:
+            yaml.dump(task_dict, f)
+    
+
 def generate_dynamicbind_input(args: argparse.Namespace):
     """Generate DynaimcBind input for a given docking data."""
 
@@ -166,6 +201,8 @@ def main(args: argparse.Namespace):
         generate_chai_input(args)
     elif args.model_type == "boltz":
         generate_boltz_input(args)
+    elif args.model_type == "rfaa":
+        generate_rfaa_input(args)
     elif args.model_type == "dynamicbind":
         generate_dynamicbind_input(args)
     elif args.model_type == "tankbind":
