@@ -20,38 +20,23 @@ RAW_THREE_TO_ONE = {
 }
 # Specific amino acid residues or post-translational modifications
 SPE_THREE_TO_ONE = {
-    '0JO': 'L', '4OG': 'E', 'AGM': 'R', 'CME': 'C', 'CSO': 'C', 
-    'DGL': 'E', 'DYA': 'Y', 'FME': 'M', 'GL3': 'G', 'KCX': 'K', 
-    'LCS': 'C', 'LLP': 'K', 'MGN': 'G', 'MSE': 'M', 'MHS': 'H', 
-    'OCS': 'C', 'PLS': 'K', 'PYL': 'O', 'SAM': 'M', 'SEP': 'S', 
-    'SEC': 'U', 'SMC': 'C', 'TP7': 'W', 'TPO': 'T', 'ASX': 'B', 
-    'GLX': 'Z', 'XAA': 'X', 'XLE': 'J', '2AS': 'D', '3AH': 'H', 
-    '5HP': 'E', 'ACL': 'R', 'AIB': 'A', 'ALM': 'A', 'ALO': 'T', 
-    'ALY': 'K', 'ARM': 'R', 'ASA': 'D', 'ASB': 'D', 'ASK': 'D', 
-    'ASL': 'D', 'ASQ': 'D', 'AYA': 'A', 'BCS': 'C', 'BHD': 'D', 
-    'BMT': 'T', 'BNN': 'A', 'BUC': 'C', 'BUG': 'L', 'C5C': 'C', 
-    'C6C': 'C', 'CAS': 'C', 'CCS': 'C', 'CEA': 'C', 'CGU': 'E', 
-    'CHG': 'A', 'CLE': 'L', 'CSD': 'A', 'CSP': 'C', 'CSS': 'C', 
-    'CSW': 'C', 'CSX': 'C', 'CXM': 'M', 'CY1': 'C', 'CY3': 'C', 
-    'CYG': 'C', 'CYM': 'C', 'CYQ': 'C', 'DAH': 'F', 'DAL': 'A', 
-    'DAR': 'R', 'DAS': 'D', 'DCY': 'C', 'DGN': 'Q', 'DHA': 'A', 
-    'DHI': 'H', 'DIL': 'I', 'DIV': 'V', 'DLE': 'L', 'DLY': 'K', 
-    'DNP': 'A', 'DPN': 'F', 'DPR': 'P', 'DSN': 'S', 'DSP': 'D', 
-    'DTH': 'T', 'DTR': 'W', 'DTY': 'Y', 'DVA': 'V', 'EFC': 'C', 
-    'FLA': 'A', 'GGL': 'E', 'GLZ': 'G', 'GMA': 'E', 'GSC': 'G', 
-    'HAC': 'A', 'HAR': 'R', 'HIC': 'H', 'HIP': 'H', 'HMR': 'R', 
-    'HPQ': 'F', 'HTR': 'W', 'HYP': 'P', 'IAS': 'D', 'IIL': 'I', 
-    'IYR': 'Y', 'LLY': 'K', 'LTR': 'W', 'LYM': 'K', 'LYZ': 'K', 
-    'MAA': 'A', 'MEN': 'N', 'MIS': 'S', 'MLE': 'L', 'MPQ': 'G', 
-    'MSA': 'G', 'MVA': 'V', 'NEM': 'H', 'NEP': 'H', 'NLE': 'L', 
-    'NLN': 'L', 'NLP': 'L', 'NMC': 'G', 'OAS': 'S', 'OMT': 'M', 
-    'PAQ': 'Y', 'PCA': 'E', 'PEC': 'C', 'PHI': 'F', 'PHL': 'F', 
-    'PR3': 'C', 'PRR': 'A', 'PTR': 'Y', 'PYX': 'C', 'SAC': 'S', 
-    'SAR': 'G', 'SCH': 'C', 'SCS': 'C', 'SCY': 'C', 'SEL': 'S', 
-    'SET': 'S', 'SHC': 'C', 'SHR': 'K', 'SOC': 'C', 'STY': 'Y', 
-    'SVA': 'S', 'TIH': 'A', 'TPL': 'W', 'TPQ': 'A', 'TRG': 'K', 
-    'TRO': 'W', 'TYB': 'Y', 'TYI': 'Y', 'TYQ': 'Y', 'TYS': 'Y', 
-    'TYY': 'Y',
+    '2AS': 'D', '3AH': 'H', '5HP': 'E', 'ACL': 'R', 'AGM': 'R', 'AIB': 'A', 'ALM': 'A', 'ALO': 'T', 'ALY': 'K', 
+    'ARM': 'R', 'ASA': 'D', 'ASB': 'D', 'ASK': 'D', 'ASL': 'D', 'ASQ': 'D', 'AYA': 'A', 'BCS': 'C', 'BHD': 'D', 
+    'BMT': 'T', 'BNN': 'A', 'BUC': 'C', 'BUG': 'L', 'C5C': 'C', 'C6C': 'C', 'CAS': 'C', 'CCS': 'C', 'CEA': 'C', 
+    'CGU': 'E', 'CHG': 'A', 'CLE': 'L', 'CME': 'C', 'CSD': 'A', 'CSO': 'C', 'CSP': 'C', 'CSS': 'C', 'CSW': 'C', 
+    'CSX': 'C', 'CXM': 'M', 'CY1': 'C', 'CY3': 'C', 'CYG': 'C', 'CYM': 'C', 'CYQ': 'C', 'DAH': 'F', 'DAL': 'A', 
+    'DAR': 'R', 'DAS': 'D', 'DCY': 'C', 'DGL': 'E', 'DGN': 'Q', 'DHA': 'A', 'DHI': 'H', 'DIL': 'I', 'DIV': 'V', 
+    'DLE': 'L', 'DLY': 'K', 'DNP': 'A', 'DPN': 'F', 'DPR': 'P', 'DSN': 'S', 'DSP': 'D', 'DTH': 'T', 'DTR': 'W', 
+    'DTY': 'Y', 'DVA': 'V', 'EFC': 'C', 'FLA': 'A', 'FME': 'M', 'GGL': 'E', 'GL3': 'G', 'GLZ': 'G', 'GMA': 'E', 
+    'GSC': 'G', 'HAC': 'A', 'HAR': 'R', 'HIC': 'H', 'HIP': 'H', 'HMR': 'R', 'HPQ': 'F', 'HTR': 'W', 'HYP': 'P', 
+    'IAS': 'D', 'IIL': 'I', 'IYR': 'Y', 'KCX': 'K', 'LLP': 'K', 'LLY': 'K', 'LTR': 'W', 'LYM': 'K', 'LYZ': 'K', 
+    'MAA': 'A', 'MEN': 'N', 'MHS': 'H', 'MIS': 'S', 'MLE': 'L', 'MPQ': 'G', 'MSA': 'G', 'MSE': 'M', 'MVA': 'V', 
+    'NEM': 'H', 'NEP': 'H', 'NLE': 'L', 'NLN': 'L', 'NLP': 'L', 'NMC': 'G', 'OAS': 'S', 'OCS': 'C', 'OMT': 'M', 
+    'PAQ': 'Y', 'PCA': 'E', 'PEC': 'C', 'PHI': 'F', 'PHL': 'F', 'PR3': 'C', 'PRR': 'A', 'PTR': 'Y', 'PYX': 'C', 
+    'SAC': 'S', 'SAR': 'G', 'SCH': 'C', 'SCS': 'C', 'SCY': 'C', 'SEL': 'S', 'SEP': 'S', 'SET': 'S', 'SHC': 'C', 
+    'SHR': 'K', 'SMC': 'C', 'SOC': 'C', 'STY': 'Y', 'SVA': 'S', 'TIH': 'A', 'TPL': 'W', 'TPO': 'T', 'TPQ': 'A', 
+    'TRG': 'K', 'TRO': 'W', 'TYB': 'Y', 'TYI': 'Y', 'TYQ': 'Y', 'TYS': 'Y', 'TYY': 'Y', 'I2M': 'I', 'MGN': 'Q',
+    'MLY': 'K', '4OG': 'W', 'DYA': 'D'
 }
 
 
@@ -158,35 +143,43 @@ def generate_posebusters_benchmark(args: argparse.Namespace):
             ccd_ids.append(line.split("_")[1])
     print("Number of Raw Posebusters Data:", len(pdb_ccd_ids))
 
-    # Get the release dates of the PDB entries
-    release_dates = [get_pdb_release_date(pdb_id) for pdb_id in tqdm(pdb_ids, desc="Getting Release Dates")]
-    docking_data = pd.DataFrame({"PDB_CCD_ID": pdb_ccd_ids, "PDB_ID": pdb_ids, "CCD_ID": ccd_ids, "RELEASE_DATE": release_dates})
-    # Filter the data to only include PDB-CCD pairs with a release date after 2021-10-01
-    docking_data = docking_data[docking_data["RELEASE_DATE"] >= "2021-10-01"]
-    # Filter out sequences that are too long
-    docking_data = docking_data[~docking_data["PDB_CCD_ID"].isin(["8F4J_PHO", "7SUC_COM"])]
-    print("Number of Filtered Posebusters Data:", len(docking_data))
+    docking_data = pd.DataFrame({"PDB_CCD_ID": pdb_ccd_ids, "PDB_ID": pdb_ids, "CCD_ID": ccd_ids})
 
-    molecule_smiles_list, protein_sequence_list, pdb_path_list, sdf_path_list = [], [], [], []
+    pdb_ccd_ids, molecule_smiles_list, protein_sequence_list, pdb_path_list, sdf_path_list = [], [], [], [], []
     for pdb_ccd_id in docking_data["PDB_CCD_ID"]:
         data_folder = os.path.join(args.input_folder, f"posebusters_benchmark_set/{pdb_ccd_id}")
-        
-        # Get the SMILES of the ligand
-        ligand_file = os.path.join(data_folder, f"{pdb_ccd_id}_ligand.sdf")
-        sdf_path_list.append(ligand_file)
-        molecule_smiles = get_molecule_smiles(ligand_file)
-        molecule_smiles_list.append(molecule_smiles)
 
         # Get the protein sequences
         protein_file = os.path.join(data_folder, f"{pdb_ccd_id}_protein.pdb")
-        pdb_path_list.append(protein_file)
         protein_sequences = "|".join([seq for seq in get_protein_sequences(protein_file) if len(seq) > 0])
-        protein_sequence_list.append(protein_sequences)
+        if len(protein_sequences) > 1500:
+            print(f"Warning: {pdb_ccd_id} has a protein sequence length of {len(protein_sequences)}, which is longer than 1500. Skipping this data.")
+            continue
+        if "-" in protein_sequences:
+            print(f"Warning: {pdb_ccd_id} has a protein sequence containing a dash (i.e., `-`). Skipping this data.")
+            continue
 
+        # Get the SMILES of the ligand
+        try:
+            ligand_file = os.path.join(data_folder, f"{pdb_ccd_id}_ligand.sdf")
+            molecule_smiles = get_molecule_smiles(ligand_file)
+        except Exception as e:
+            print(f"Warning: {pdb_ccd_id} has an error when getting the SMILES of the ligand. Skipping this data.")
+            continue
+        
+        # Append the data
+        pdb_ccd_ids.append(pdb_ccd_id)
+        molecule_smiles_list.append(molecule_smiles)
+        protein_sequence_list.append(protein_sequences)
+        pdb_path_list.append(protein_file)
+        sdf_path_list.append(ligand_file)
+
+    docking_data = docking_data[docking_data["PDB_CCD_ID"].isin(pdb_ccd_ids)].copy()
     docking_data["LIGAND_SMILES"] = molecule_smiles_list
     docking_data["PROTEIN_SEQUENCE"] = protein_sequence_list
     docking_data["PROTEIN_PDB_PATH"] = pdb_path_list
     docking_data["LIGAND_SDF_PATH"] = sdf_path_list
+    print("Number of Filtered Posebusters Data:", len(docking_data))
  
     # Save the filtered data to a CSV file
     if not os.path.exists(args.output_folder):
