@@ -14,9 +14,9 @@ MODEL_TYPE=$2
 
 # Set dataset folder based on DATASET
 if [ "$DATASET" = "posebusters" ]; then
-    DATASET_FOLDER="data/posebusters/posebusters_benchmark_set"
+    DATASET_FOLDER="data/dataset/posebusters_benchmark_set"
 elif [ "$DATASET" = "astex" ]; then
-    DATASET_FOLDER="data/posebusters/astex_diverse_set"
+    DATASET_FOLDER="data/dataset/astex_diverse_set"
 else
     echo "Error: Unknown dataset ${DATASET}"
     exit 1
@@ -24,8 +24,8 @@ fi
 
 
 python scripts/calculate_benchmark_result.py \
-    --input_file data/microcyto/${DATASET}/${DATASET}_benchmark.csv \
+    --input_file data/benchmark/${DATASET}/${DATASET}_benchmark.csv \
     --dataset_folder ${DATASET_FOLDER} \
-    --model_output_folder data/microcyto/${DATASET}/${MODEL_TYPE}/output \
+    --model_output_folder data/benchmark/${DATASET}/${MODEL_TYPE}/output \
     --model_type ${MODEL_TYPE} \
     --dataset ${DATASET}

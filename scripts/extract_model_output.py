@@ -110,18 +110,10 @@ def extract_chai_output(args: argparse.Namespace):
         # Parse the MMCIFFile to PDB
         parser = MMCIFParser()
         structure = parser.get_structure(pdb_ccd_id, os.path.join(args.output_folder, f"{pdb_ccd_id}/pred.model_idx_{best_model_idx}.cif"))
+        print("best_model_idx: ", best_model_idx)
         pdb_io = PDBIO()
         pdb_io.set_structure(structure)
         pdb_io.save(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model.pdb"))
-
-        # Convert the ligand atoms to HETATM
-        pdb = PandasPdb().read_pdb(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model.pdb"))
-        ligand_atoms = pdb.df["ATOM"][pdb.df["ATOM"]["atom_name"] == "LIG"]
-        ligand_indices = ligand_atoms.index
-        pdb.df["ATOM"] = pdb.df["ATOM"].drop(ligand_indices)
-        ligand_atoms.record_name = "HETATM"
-        pdb.df["HETATM"] = ligand_atoms
-        pdb.to_pdb(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model.pdb"))
         
         # Parse the PDBFile
         pdb = prody.parsePDB(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model.pdb"))

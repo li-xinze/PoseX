@@ -10,9 +10,9 @@ fi
 
 DATASET="$1"
 
-BOLTZ_INPUT_FOLDER="data/microcyto/${DATASET}/boltz/input"
-BOLTZ_OUTPUT_FOLDER="data/microcyto/${DATASET}/boltz/output"
-GPU_ID=3
+BOLTZ_INPUT_FOLDER="data/benchmark/${DATASET}/boltz/input"
+BOLTZ_OUTPUT_FOLDER="data/benchmark/${DATASET}/boltz/output"
+GPU_ID=2
 
 # init conda
 eval "$(conda shell.bash hook)"
@@ -23,7 +23,7 @@ for yaml_file in ${BOLTZ_INPUT_FOLDER}/*.yaml; do
     output_folder="${BOLTZ_OUTPUT_FOLDER}/${filename}"
 
     echo "Predicting ${yaml_file} to ${output_folder} ..."
-    CUDA_VISIBLE_DEVICES=${GPU_ID} boltz predict ${yaml_file} --out_dir ${output_folder} --cache /data/models/boltz --use_msa_server
+    CUDA_VISIBLE_DEVICES=${GPU_ID} boltz predict ${yaml_file} --out_dir ${output_folder} --cache /data/models/boltz --use_msa_server --diffusion_samples 5
 done
 
 conda activate microcyto

@@ -10,9 +10,9 @@ fi
 
 DATASET="$1"
 
-CHAI_INPUT_FOLDER="data/microcyto/${DATASET}/chai/input"
-CHAI_OUTPUT_FOLDER="data/microcyto/${DATASET}/chai/output"
-GPU_ID=2
+CHAI_INPUT_FOLDER="data/benchmark/${DATASET}/chai/input"
+CHAI_OUTPUT_FOLDER="data/benchmark/${DATASET}/chai/output"
+GPU_ID=1
 
 # init conda
 eval "$(conda shell.bash hook)"
@@ -23,10 +23,7 @@ for fasta_file in ${CHAI_INPUT_FOLDER}/*.fasta; do
     output_folder="${CHAI_OUTPUT_FOLDER}/${filename}"
 
     echo "Predicting ${fasta_file} to ${output_folder} ..."
-    python scripts/run_chai/run_chai.py \
-        --fasta_file ${fasta_file} \
-        --output_dir ${output_folder} \
-        --gpu_id ${GPU_ID}
+    CUDA_VISIBLE_DEVICES=${GPU_ID} chai fold --use-msa-server ${fasta_file} ${output_folder}
 done
 
 conda activate microcyto

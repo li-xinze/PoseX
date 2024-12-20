@@ -14,6 +14,6 @@ DATASET=$1
 MODEL_TYPE=$2
 
 python scripts/convert_to_model_input.py \
-    --input_file data/microcyto/${DATASET}/${DATASET}_benchmark.csv \
-    --output_folder data/microcyto/${DATASET}/${MODEL_TYPE}/input \
+    --input_file data/benchmark/${DATASET}/${DATASET}_benchmark.csv \
+    --output_folder data/benchmark/${DATASET}/${MODEL_TYPE}/input \
     --model_type ${MODEL_TYPE}

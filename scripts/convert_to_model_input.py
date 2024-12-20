@@ -45,16 +45,15 @@ def generate_alphafold3_input(args: argparse.Namespace):
         task_dict["dialect"] = "alphafold3"
         task_dict["version"] = 1
 
-        part_folder = os.path.join(args.output_folder, f"part_{data_idx % 4}")
-        os.makedirs(part_folder, exist_ok=True)
-        with open(os.path.join(part_folder, f"{task_name}.json"), "w") as f:
+        os.makedirs(args.output_folder, exist_ok=True)
+        with open(os.path.join(args.output_folder, f"{task_name}.json"), "w") as f:
             json.dump(task_dict, f, indent=2)
 
 
 def generate_chai_input(args: argparse.Namespace):
     """Generate CHAI input for a given docking data."""
 
-    docking_data = pd.read_csv(args.input_file)    
+    docking_data = pd.read_csv(args.input_file)
     for _, row in tqdm(docking_data.iterrows(), total=len(docking_data)):
         fasta_string = ""
 

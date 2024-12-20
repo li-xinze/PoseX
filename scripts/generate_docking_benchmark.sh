@@ -11,6 +11,6 @@ fi
 DATASET="$1"
 
 python scripts/generate_docking_benchmark.py \
-    --input_folder data/posebusters \
-    --output_folder data/microcyto/${DATASET} \
+    --input_folder data/dataset \
+    --output_folder data/benchmark/${DATASET} \
     --dataset ${DATASET}

@@ -11,8 +11,8 @@ fi
 DATASET="$1"
 
 GPU_ID=2
-RFAA_INPUT_FOLDER="data/microcyto/${DATASET}/rfaa/input"
-RFAA_OUTPUT_FOLDER="data/microcyto/${DATASET}/rfaa/output"
+RFAA_INPUT_FOLDER="data/benchmark/${DATASET}/rfaa/input"
+RFAA_OUTPUT_FOLDER="data/benchmark/${DATASET}/rfaa/output"
 
 # Create output folder
 mkdir -p ${RFAA_OUTPUT_FOLDER}

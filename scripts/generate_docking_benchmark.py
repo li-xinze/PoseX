@@ -51,7 +51,7 @@ SPE_THREE_TO_ONE = {
     'SET': 'S', 'SHC': 'C', 'SHR': 'K', 'SOC': 'C', 'STY': 'Y', 
     'SVA': 'S', 'TIH': 'A', 'TPL': 'W', 'TPQ': 'A', 'TRG': 'K', 
     'TRO': 'W', 'TYB': 'Y', 'TYI': 'Y', 'TYQ': 'Y', 'TYS': 'Y', 
-    'TYY': 'Y', 'SAH': 'M', 'BAL': 'A'
+    'TYY': 'Y',
 }
 
 
@@ -206,9 +206,7 @@ def generate_astex_benchmark(args: argparse.Namespace):
             ccd_ids.append(line.split("_")[1])
     print("Number of Raw Astex Data:", len(pdb_ccd_ids))
 
-    # Get the release dates of the PDB entries
-    release_dates = [get_pdb_release_date(pdb_id) for pdb_id in tqdm(pdb_ids, desc="Getting Release Dates")]
-    docking_data = pd.DataFrame({"PDB_CCD_ID": pdb_ccd_ids, "PDB_ID": pdb_ids, "CCD_ID": ccd_ids, "RELEASE_DATE": release_dates})
+    docking_data = pd.DataFrame({"PDB_CCD_ID": pdb_ccd_ids, "PDB_ID": pdb_ids, "CCD_ID": ccd_ids})
 
     pdb_ccd_ids, molecule_smiles_list, protein_sequence_list, pdb_path_list, sdf_path_list = [], [], [], [], []
     for pdb_ccd_id in docking_data["PDB_CCD_ID"]:
@@ -217,13 +215,12 @@ def generate_astex_benchmark(args: argparse.Namespace):
         # Get the protein sequences
         protein_file = os.path.join(data_folder, f"{pdb_ccd_id}_protein.pdb")
         protein_sequences = "|".join([seq for seq in get_protein_sequences(protein_file) if len(seq) > 0])
-        if len(protein_sequences) > 2500:
+        if len(protein_sequences) > 1500:
             print(f"Warning: {pdb_ccd_id} has a protein sequence length of {len(protein_sequences)}, which is longer than 2500. Skipping this data.")
             continue
         if "-" in protein_sequences:
             print(f"Warning: {pdb_ccd_id} has a protein sequence containing a dash (i.e., `-`). Skipping this data.")
             continue
-
 
         # Get the SMILES of the ligand
         try:
@@ -261,7 +258,6 @@ def main(args: argparse.Namespace):
         generate_astex_benchmark(args)
     else:
         raise ValueError(f"Unknown dataset: {args.dataset}")
-
 
 
 if __name__ == "__main__":

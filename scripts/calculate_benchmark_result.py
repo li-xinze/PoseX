@@ -41,15 +41,6 @@ def main(args: argparse.Namespace):
 
     total_samples = 0
     for pdb_ccd_id in docking_data["PDB_CCD_ID"]:
-        if args.model_type == "chai" and pdb_ccd_id in ["8FAV_4Y5"]:  # For Chai, we skip 8FAV_4Y5 because it is not a valid molecule
-            total_samples += 1
-            print(f"Skipping {pdb_ccd_id} for Chai")
-            continue
-        if args.model_type == "boltz" and pdb_ccd_id in ["7F8T_FAD"]:  # For Boltz, we skip 7F8T_FAD because it is not a valid molecule
-            total_samples += 1
-            print(f"Skipping {pdb_ccd_id} for Boltz")
-            continue
-
         mol_true = os.path.join(args.dataset_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_ligands.sdf")
         mol_cond = os.path.join(args.dataset_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_protein.pdb")
 
@@ -72,7 +63,7 @@ def main(args: argparse.Namespace):
 
     # Calculate posebusters result
     buster = PoseBusters(config="redock", top_n=None)
-    buster.config["loading"]["mol_true"]["load_all"] = False
+    buster.config["loading"]["mol_true"]["load_all"] = True
     bust_results = buster.bust_table(bust_data, full_report=True)
     bust_results["PDB_CCD_ID"] = bust_dict["PDB_CCD_ID"]
     bust_results.to_csv(os.path.join(save_folder, f"{args.dataset}_benchmark_result_{args.model_type}.csv"), index=False)

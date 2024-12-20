@@ -13,6 +13,6 @@ DATASET=$1
 MODEL_TYPE=$2
 
 python scripts/extract_model_output.py \
-    --input_file data/microcyto/${DATASET}/${DATASET}_benchmark.csv \
-    --output_folder data/microcyto/${DATASET}/${MODEL_TYPE}/output \
+    --input_file data/benchmark/${DATASET}/${DATASET}_benchmark.csv \
+    --output_folder data/benchmark/${DATASET}/${MODEL_TYPE}/output \
     --model_type ${MODEL_TYPE}

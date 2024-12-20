@@ -15,10 +15,10 @@ This project provides a complete pipeline for:
 ```plaintext
 .
 ├── data     # Data directory (gitignored)
-│   ├── microcyto      # Processed benchmark data
+│   ├── benchmark      # Processed benchmark data
 │   │   ├── astex
 │   │   └── posebusters
-│   └── posebusters    # Raw PoseBusters dataset
+│   └── dataset    # Raw dataset
 ├── environments    # Environment configuration files
 └── scripts
     ├── calculate_benchmark_result.sh     # Calculate benchmark result
