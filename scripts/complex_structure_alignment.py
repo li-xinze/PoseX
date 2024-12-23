@@ -311,7 +311,18 @@ def run_structure_alignment(predicted_protein_pdb: str, predicted_ligand_sdf: Op
 
 
 def run_structure_alignment_v2(predicted_protein_pdb: str, predicted_ligand_sdf: str,
-                               reference_protein_pdb: str, reference_ligands_sdf: str):
+                               reference_protein_pdb: str, reference_ligands_sdf: str) -> float:
+    """Run structure alignment for a predicted protein-ligand complex.
+
+    Args:
+        predicted_protein_pdb (str): Path to the predicted protein structure in PDB format
+        predicted_ligand_sdf (str): Path to the predicted ligand structure in SDF format
+        reference_protein_pdb (str): Path to the reference protein structure in PDB format
+        reference_ligands_sdf (str): Path to the reference ligands in SDF format
+
+    Returns:
+        float: Best aligned RMSD
+    """
     best_aligned_rmsd = np.inf
     
     reference_ligands = Chem.SDMolSupplier(reference_ligands_sdf, sanitize=False, removeHs=True)    
@@ -329,12 +340,12 @@ def run_structure_alignment_v2(predicted_protein_pdb: str, predicted_ligand_sdf:
             # Load reference protein and ligand
             cmd.load(reference_protein_pdb, "reference_protein")
             cmd.load(reference_ligand_sdf, "reference_ligand")
-            cmd.select("reference_pocket", "br. (%reference_protein and name CA) w. 10.0 for (%reference_ligand and not h.)")
+            cmd.select("reference_pocket", "br. (%reference_protein and name CA+C+N) w. 10.0 for (%reference_ligand and not h.)")
 
             # Load predicted protein and ligand
             cmd.load(predicted_protein_pdb, "predicted_protein")
             cmd.load(predicted_ligand_sdf, "predicted_ligand")
-            cmd.select("predicted_pocket", "br. (%predicted_protein and name CA) w. 10.0 for (%predicted_ligand and not h.)")
+            cmd.select("predicted_pocket", "br. (%predicted_protein and name CA+C+N) w. 10.0 for (%predicted_ligand and not h.)")
 
             # Align predicted pocket and predicted ligand to reference pocket
             cmd.align("predicted_pocket", "reference_pocket")
