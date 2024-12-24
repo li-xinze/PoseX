@@ -1,6 +1,8 @@
 from pymol import cmd
 from rdkit import Chem
 from rdkit.Chem import AllChem
+from rdkit.Chem import rdMolAlign
+from rdkit.Chem import RenumberAtoms
 import numpy as np
 
 def sdf_to_pdb(sdf_file, output_dir):
@@ -50,11 +52,11 @@ def calculate_ligand_rmsd(aligned_native_pdb, aligned_pred_pdb):
     return rmsd
 
 
-def align_with_pkt(native_protein, native_ligand, predicted_protein, predicted_ligand, output_dir, radius=10.0, ligand_resname="UNL"):
+def align_with_pkt(native_protein, native_ligand_pdb, predicted_protein, predicted_ligand_pdb, output_dir, radius=10.0, ligand_resname="UNL", format='sdf'):
 
 
     # Load the structures
-    pkt_id = os.path.split(native_ligand)[1][:-4].replace("gt_ligand", "")
+    pkt_id = os.path.split(native_ligand_pdb)[1][:-4].replace("gt_ligand", "")
     pymol.finish_launching()
     cmd.load(native_protein, "native_protein")
     cmd.load(predicted_protein, "pred_protein")
@@ -64,8 +66,8 @@ def align_with_pkt(native_protein, native_ligand, predicted_protein, predicted_l
     cmd.create("native", "native_protein or native_ligand")  
     cmd.create("predicted", "pred_protein or predicted_ligand")
 
-    cmd.select("gt_ligand", f"native and resn {ligand_resname}")
-    cmd.select("pred_ligand", f"predicted and resn LIG")
+    cmd.select("gt_ligand", f"native and resn {ligand_resname} and not hydro")
+    cmd.select("pred_ligand", f"predicted and resn LIG and not hydro")
 
     
     # Select nearby N, CA, and C atoms within the radius
@@ -75,8 +77,8 @@ def align_with_pkt(native_protein, native_ligand, predicted_protein, predicted_l
     # Align the nearby atoms
     cmd.align("predicted_pkt_atoms", "native_pkt_atoms")
 
-    aligned_pred_ligand_pdb = os.path.join(output_dir, f'aligned_pred_ligand_{pkt_id}.pdb')
-    aligned_gt_ligand_pdb = os.path.join(output_dir, f'aligned_gt_ligand_{pkt_id}.pdb')
+    aligned_pred_ligand_pdb = os.path.join(output_dir, f'aligned_pred_ligand_{pkt_id}.{format}')
+    aligned_gt_ligand_pdb = os.path.join(output_dir, f'aligned_gt_ligand_{pkt_id}.{format}')
     aligned_pred_protein_pdb = os.path.join(output_dir, f'aligned_pred_protein_{pkt_id}.pdb')
     aligned_gt_protein_pdb = os.path.join(output_dir, f'aligned_gt_protein_{pkt_id}.pdb')
 
@@ -103,9 +105,9 @@ def align_with_pkt(native_protein, native_ligand, predicted_protein, predicted_l
 
 # Example usage
 
-output_root = 'protein_ligand_docking/output' 
-native_root = 'protein_ligand_docking/astex_diverse_set'
-chai_pred_root = 'protein_ligand_docking/data/benchmark/astex/chai/output'
+output_root = 'protein_ligand_docking/posebusters_output' 
+native_root = 'protein_ligand_docking/posebusters_benchmark_set'
+chai_pred_root = 'protein_ligand_docking/chai_posebusters/benchmark/posebusters/chai/output'
 
 targets = os.listdir(chai_pred_root)
 rmsd_dict = {}
@@ -123,12 +125,34 @@ for target in targets:
     for i in range(mumber_of_ligands):
         native_ligand_pdb = os.path.join(output_dir, f'gt_ligand{i+1}.pdb')
         ligand_rmsd_cur, aligned_pred_ligand_pdb, aligned_gt_ligand_pdb = align_with_pkt(native_protein_pdb, native_ligand_pdb, \
-                                                        predicted_protein_pdb, predicted_ligand_pdb, output_dir)
-        ligand_rmsd = calculate_ligand_rmsd(aligned_gt_ligand_pdb, aligned_pred_ligand_pdb)
+                                                        predicted_protein_pdb, predicted_ligand_pdb, output_dir, radius=10.0, ligand_resname="UNL", format='pdb')
+        ref_mol = Chem.MolFromPDBFile(aligned_gt_ligand_pdb)
+        pred_mol = Chem.MolFromPDBFile(aligned_pred_ligand_pdb)
+        matches = ref_mol.GetSubstructMatches(pred_mol, uniquify=False)
+        if not matches:
+            print("No matching found between molecules")
+            continue
+        # Get the first match (atom indices mapping)
+        match = matches[0]
+        
+        # Create new ordering based on reference
+        new_order = [0] * pred_mol.GetNumAtoms()
+        for i, j in enumerate(match):
+            new_order[j] = i
+
+        # Renumber atoms in predicted molecule
+        reordered_mol = Chem.RenumberAtoms(pred_mol, new_order)
+        try:
+            ligand_rmsd = rdMolAlign.CalcRMS(reordered_mol, ref_mol)
+        except:
+            ligand_rmsd = 1000000
+            print(f'abnormal {target}: {ligand_rmsd}')
+
+        # ligand_rmsd = calculate_ligand_rmsd(aligned_gt_ligand_pdb, aligned_pred_ligand_pdb)
         if ligand_rmsd < best_rmsd:
             best_rmsd = ligand_rmsd
     print(f'{target}: {best_rmsd}')
     rmsd_dict[target] = best_rmsd
-with open(os.path.join(output_root,'chai_rmsd.txt'), 'w') as f:
+with open(os.path.join(output_root,'chai_posebusters_rmsd_rdkit.txt'), 'w') as f:
     for target, rmsd in rmsd_dict.items():
         f.write(f'{target}: {rmsd}\n')
