@@ -127,6 +127,11 @@ def get_protein_sequences(input_file: str) -> List[str]:
                 chain_sequence += "-"
                 print(f"Warning: {input_file} {chain.id} {residue.id} {resname} cannot be recognized, replaced with a dash (i.e., `-`).")
         
+        # Skip chains with less than 10 amino acids
+        if len(chain_sequence) <= 10:
+            print(f"Warning: {input_file} {chain.id} has less than 10 amino acids, skipping this chain.")
+            continue
+
         protein_sequences.append(chain_sequence)
     
     return protein_sequences

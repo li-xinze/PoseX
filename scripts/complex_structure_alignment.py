@@ -1,5 +1,7 @@
 import argparse
+import json
 import os
+import subprocess
 import tempfile
 from typing import Optional, Any, Tuple, Union, Dict
 
@@ -374,6 +376,73 @@ def run_structure_alignment_v2(predicted_protein_pdb: str, predicted_ligand_sdf:
     return best_aligned_rmsd
 
 
+OST_COMPARE_SCRIPT = r"""
+#!/bin/bash
+
+IMAGE_NAME=registry.scicore.unibas.ch/schwede/openstructure:2.9.0
+
+command="compare-ligand-structures \
+-m {predicted_protein_path} \
+-ml {predicted_ligand_path} \
+-r {reference_protein_path} \
+-rl {reference_ligand_path} \
+--fault-tolerant \
+--lddt-pli --rmsd \
+--substructure-match \
+-o {output_path}"
+
+docker run -u $(id -u):$(id -g) --rm --volume {mount}:{mount} $IMAGE_NAME $command
+"""
+
+def run_ost_compare_ligand_structure(predicted_protein_pdb: str, predicted_ligand_sdf: str,
+                                     reference_protein_pdb: str, reference_ligands_sdf: str) -> float:
+    """Run OpenStructure compare-ligand-structures for a predicted protein-ligand complex.
+
+    Args:
+        predicted_protein_pdb (str): Path to the predicted protein structure in PDB format
+        predicted_ligand_sdf (str): Path to the predicted ligand structure in SDF format
+        reference_protein_pdb (str): Path to the reference protein structure in PDB format
+        reference_ligands_sdf (str): Path to the reference ligands in SDF format
+
+    Returns:
+        float: Best aligned RMSD
+    """
+    # Convert all paths to absolute paths
+    predicted_protein_path = os.path.abspath(predicted_protein_pdb)
+    predicted_ligand_path = os.path.abspath(predicted_ligand_sdf)
+    reference_protein_path = os.path.abspath(reference_protein_pdb)
+    reference_ligand_path = os.path.abspath(reference_ligands_sdf)
+
+    output_folder = os.path.dirname(predicted_protein_path)
+    output_path = os.path.join(output_folder, "compare_ligand_structure.json")
+
+    mount = os.path.abspath(".")
+    
+    running_script = OST_COMPARE_SCRIPT.format(
+        mount=mount,
+        predicted_protein_path=predicted_protein_path,
+        predicted_ligand_path=predicted_ligand_path,
+        reference_protein_path=reference_protein_path,
+        reference_ligand_path=reference_ligand_path,
+        output_path=output_path,
+    )
+    subprocess.run(running_script, shell=True, check=False, executable="/bin/bash", capture_output=True)
+
+    process = subprocess.Popen(running_script, shell=True, executable="/bin/bash",
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    stdout, stderr = process.communicate()
+
+    if process.returncode != 0:
+        raise RuntimeError(f"Command failed with return code {process.returncode}\nError: {stderr}")
+    if not os.path.exists(output_path):
+        raise FileNotFoundError(f"Output file not found: {output_path}")
+
+    with open(output_path, "r") as f:
+        output_data = json.load(f)
+
+    return output_data["rmsd"]["assigned_scores"][0]["score"]
+
+
 def main(args: argparse.Namespace):
     docking_data = pd.read_csv(args.input_file)
     rmsd_dict = {}
@@ -395,6 +464,15 @@ def main(args: argparse.Namespace):
 
         reference_protein_pdb = os.path.join(args.dataset_folder, f"{pdb_ccd_id.upper()}", f"{pdb_ccd_id.upper()}_protein.pdb")
         reference_ligands_sdf = os.path.join(args.dataset_folder, f"{pdb_ccd_id.upper()}", f"{pdb_ccd_id.upper()}_ligands.sdf")
+
+        # try:
+        #     best_aligned_rmsd = run_ost_compare_ligand_structure(predicted_protein_pdb=predicted_protein_pdb,
+        #                                                          predicted_ligand_sdf=predicted_ligand_sdf,
+        #                                                          reference_protein_pdb=reference_protein_pdb,
+        #                                                          reference_ligands_sdf=reference_ligands_sdf)
+        # except Exception as e:
+        #     print(f"Error running OpenStructure compare-ligand-structures for {pdb_ccd_id}: {e}")
+        #     best_aligned_rmsd = 100.0
 
         best_aligned_rmsd = run_structure_alignment_v2(predicted_protein_pdb=predicted_protein_pdb,
                                                        predicted_ligand_sdf=predicted_ligand_sdf,
