@@ -1,0 +1,41 @@
+\begin{table}[tb]
+\centering
+\caption{Selection process of the PDB entries and ligands for the PoseX Benchmark set (cross-dock).}
+\vspace{2mm}
+\resizebox{\columnwidth}{!}{
+\begin{threeparttable}
+\begin{tabular}{p{0.60\columnwidth}cc}
+\toprule[1pt]
+Selection step & Number of proteins  & Number of ligands\\ 
+\hline 
+PDB entries released from 1 January 2022 to 1 January 2025 feature a refinement resolution of 2 \angstrom~or better and include at least one protein and one ligand  & {{ input.PDB }} & {{ input.CCD }}  \\ 
+Remove unknown ligands (e.g. UNX, UNL) & {{ filter_with_unknown_ccd.PDB }} & {{ filter_with_unknown_ccd.CCD }}  \\ 
+Ligands weighing from 100 Da to 900 Da & {{ filter_with_molwt.PDB }} & {{ filter_with_molwt.CCD }}  \\ 
+Ligands with at least 3 heavy atoms & {{ filter_with_num_heavy_atom.PDB }} & {{ filter_with_num_heavy_atom.CCD }}  \\ 
+Ligands containing only H, C, O, N, P, S, F, Cl atoms & {{ filter_with_mol_element.PDB }} & {{ filter_with_mol_element.CCD }}  \\ 
+Ligands that are not covalently bound to protein  & {{ filter_with_covalent_bond.PDB }} & {{ filter_with_covalent_bond.CCD }}  \\ 
+Structures with no unknown atoms (e.g. element X)  & {{ filter_with_unknown_atoms.PDB }} & {{ filter_with_unknown_atoms.CCD }}  \\ 
+Ligand real space R-factor is at most 0.2  & {{ filter_with_RSR.PDB }} & {{ filter_with_RSR.CCD }}  \\ 
+Ligand real space correlation coefficient is at least 0.95 & {{ filter_with_RSCC.PDB }} & {{ filter_with_RSCC.CCD }}  \\ 
+Ligand model completeness is 100\% & {{ filter_with_model_completeness.PDB }} & {{ filter_with_model_completeness.CCD }}  \\ 
+Ligand starting conformation could be generated with ETKDGv3 & {{ filter_with_ETKDG.PDB }} & {{ filter_with_ETKDG.CCD }}  \\ 
+All ligand SDF files can be loaded with RDKit and pass its sanitization & {{ filter_with_rdkit.PDB }} & {{ filter_with_rdkit.CCD }}  \\ 
+PDB ligand report does not list stereochemical errors & {{ filter_with_stereo_outliers.PDB }} & {{ filter_with_stereo_outliers.CCD }}  \\ 
+PDB ligand report does not list any atomic clashes  & {{ filter_with_intermolecular_clashes.PDB }} & {{ filter_with_intermolecular_clashes.CCD }}  \\ 
+Select single protein-ligand conformation \tnote{1} & {{ select_single_conformation.PDB }} & {{ select_single_conformation.CCD }}  \\ 
+Intermolecular distance between the ligand(s) and the protein is at least 0.2 \angstrom & {{ filter_with_lignad_protein_distance.PDB }} & {{ filter_with_lignad_protein_distance.CCD }}  \\
+Intermolecular distance between the ligand(s) and the other ligands is at least 5.0 \angstrom & {{ filter_with_lignad_ligand_distance.PDB }} & {{ filter_with_lignad_ligand_distance.CCD }}  \\
+Remove ligands which are within 5.0 \angstrom~of any protein symmetry mate & {{ filter_crystal_contact.PDB }} & {{ filter_crystal_contact.CCD }} \\
+Cluster proteins that have at least 90\% sequence identity \tnote{2}  & {{ filter_with_clustering.PDB }} & {{ filter_with_clustering.CCD }} \\
+Structures can be successfully  alinged to the reference structure in each cluster \tnote{3} & {{ filter_with_cross_alignment.PDB }} & {{ filter_with_cross_alignment.CCD }} \\
+\bottomrule[1pt]
+\end{tabular}
+\begin{tablenotes}
+\item[1] The first conformation was chosen when multiple conformations were available in the PDB entry.
+\item[2] Clustering with MMseqs2 is done with an sequence identity threshold of 90\% and a minimum coverage of 80\%.
+\item[3] Each candidate protein is structurally aligned to the reference protein via superposition of $C_{\alpha}$ atom of amino acid residues using PyMOL. A candidate PDB entry is removed if the RMSD of the protein alignment is greater than 2.0 \angstrom~and a candidate ligand is removed if it is  4.0 \angstrom~away from the reference ligand.
+\end{tablenotes}
+\end{threeparttable}
+}
+\label{table:notation}
+\end{table}
