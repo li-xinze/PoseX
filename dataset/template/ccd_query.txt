@@ -1,0 +1,16 @@
+query molecule ($id: String!) {
+    chem_comp(comp_id:$id){
+        chem_comp {
+            id,
+            name,
+            formula_weight,
+            type
+        }
+        pdbx_chem_comp_descriptor {
+            type,
+            descriptor,
+            program,
+            program_version
+        }
+    }
+}

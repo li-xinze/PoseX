@@ -1,0 +1,36 @@
+query ($id: String!) {
+  entry(entry_id: $id) {
+    rcsb_entry_info {
+      experimental_method,
+      resolution_combined
+    }
+    nonpolymer_entities {
+      nonpolymer_comp {
+        chem_comp {
+          name,
+          id
+        }
+      }
+      rcsb_nonpolymer_entity_annotation {
+        type
+      }
+      nonpolymer_entity_instances {
+        rcsb_nonpolymer_entity_instance_container_identifiers {
+          auth_seq_id,
+          auth_asym_id,
+          asym_id,
+          entity_id,
+          entry_id
+        }
+        rcsb_nonpolymer_instance_validation_score {
+          RSCC,
+          RSR,
+          completeness,
+          intermolecular_clashes,
+          stereo_outliers,
+          is_subject_of_investigation
+        }
+      }
+    }
+  }
+}
