@@ -36,7 +36,7 @@ SPE_THREE_TO_ONE = {
     'SAC': 'S', 'SAR': 'G', 'SCH': 'C', 'SCS': 'C', 'SCY': 'C', 'SEL': 'S', 'SEP': 'S', 'SET': 'S', 'SHC': 'C', 
     'SHR': 'K', 'SMC': 'C', 'SOC': 'C', 'STY': 'Y', 'SVA': 'S', 'TIH': 'A', 'TPL': 'W', 'TPO': 'T', 'TPQ': 'A', 
     'TRG': 'K', 'TRO': 'W', 'TYB': 'Y', 'TYI': 'Y', 'TYQ': 'Y', 'TYS': 'Y', 'TYY': 'Y', 'I2M': 'I', 'MGN': 'Q',
-    'MLY': 'K', '4OG': 'W', 'DYA': 'D'
+    'MLY': 'K', '4OG': 'W', 'DYA': 'D', '4AF': 'F', 'SNN': 'N', 'M3L': 'K', 'OTY': 'Y'
 }
 
 
@@ -122,6 +122,8 @@ def get_protein_sequences(input_file: str) -> List[str]:
             elif resname in SPE_THREE_TO_ONE:
                 chain_sequence += SPE_THREE_TO_ONE[resname]
                 print(f"Warning: {input_file} {chain.id} {residue.id} {resname} is not a normal amino acid residue, replaced with {SPE_THREE_TO_ONE[resname]}.")
+            elif resname in ["SAM", "SFG", "SAH", "PLS", "UN1", "ETA", "41K"]:
+                print(f"Warning: {input_file} {chain.id} {residue.id} is a {resname}, skipped.")
             # Unknown residues
             else:
                 chain_sequence += "-"
@@ -262,7 +264,7 @@ def generate_posex_benchmark(args: argparse.Namespace, mode: str):
         protein_file = os.path.join(data_folder, f"{pdb_ccd_id}_protein.pdb")
         protein_sequences = "|".join([seq for seq in get_protein_sequences(protein_file) if len(seq) > 0])
         if len(protein_sequences) > 1500:
-            print(f"Warning: {pdb_ccd_id} has a protein sequence length of {len(protein_sequences)}, which is longer than 2500. Skipping this data.")
+            print(f"Warning: {pdb_ccd_id} has a protein sequence length of {len(protein_sequences)}, which is longer than 1500. Skipping this data.")
             continue
         if "-" in protein_sequences:
             print(f"Warning: {pdb_ccd_id} has a protein sequence containing a dash (i.e., `-`). Skipping this data.")
