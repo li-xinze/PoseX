@@ -166,7 +166,7 @@ def generate_posebusters_benchmark(args: argparse.Namespace):
 
         # Get the SMILES of the ligand
         try:
-            ligand_file = os.path.join(data_folder, f"{pdb_ccd_id}_ligand.sdf")
+            ligand_file = os.path.join(data_folder, f"{pdb_ccd_id}_ligand_start_conf.sdf")
             molecule_smiles = get_molecule_smiles(ligand_file)
         except Exception as e:
             print(f"Warning: {pdb_ccd_id} has an error when getting the SMILES of the ligand. Skipping this data.")
@@ -222,7 +222,7 @@ def generate_astex_benchmark(args: argparse.Namespace):
 
         # Get the SMILES of the ligand
         try:
-            ligand_file = os.path.join(data_folder, f"{pdb_ccd_id}_ligand.sdf")
+            ligand_file = os.path.join(data_folder, f"{pdb_ccd_id}_ligand_start_conf.sdf")
             molecule_smiles = get_molecule_smiles(ligand_file)
         except Exception as e:
             print(f"Warning: {pdb_ccd_id} has an error when getting the SMILES of the ligand. Skipping this data.")
@@ -249,11 +249,63 @@ def generate_astex_benchmark(args: argparse.Namespace):
     print("Saved Astex Benchmark to ", os.path.join(args.output_folder, "astex_benchmark.csv"))
 
 
+def generate_posex_benchmark(args: argparse.Namespace, mode: str):
+    """Generate the PoseX benchmark"""
+    data_root = os.path.join(args.input_folder, f"posex_{mode}_set")
+    pdb_ccd_ids = os.listdir(data_root)
+    print(f"Number of PoseX {mode} Data:", len(pdb_ccd_ids))
+    docking_data = pd.DataFrame({"PDB_CCD_ID": pdb_ccd_ids})
+    pdb_ccd_ids, molecule_smiles_list, protein_sequence_list, pdb_path_list, sdf_path_list = [], [], [], [], []
+    for pdb_ccd_id in docking_data["PDB_CCD_ID"]:
+        data_folder = os.path.join(data_root, pdb_ccd_id)
+        # Get the protein sequences
+        protein_file = os.path.join(data_folder, f"{pdb_ccd_id}_protein.pdb")
+        protein_sequences = "|".join([seq for seq in get_protein_sequences(protein_file) if len(seq) > 0])
+        if len(protein_sequences) > 1500:
+            print(f"Warning: {pdb_ccd_id} has a protein sequence length of {len(protein_sequences)}, which is longer than 2500. Skipping this data.")
+            continue
+        if "-" in protein_sequences:
+            print(f"Warning: {pdb_ccd_id} has a protein sequence containing a dash (i.e., `-`). Skipping this data.")
+            continue
+        # Get the SMILES of the ligand
+        try:
+            ligand_file = os.path.join(data_folder, f"{pdb_ccd_id}_ligand_start_conf.sdf")
+            molecule_smiles = get_molecule_smiles(ligand_file)
+        except Exception as e:
+            print(f"Warning: {pdb_ccd_id} has an error when getting the SMILES of the ligand. Skipping this data.")
+            continue
+        
+        # Append the data
+        pdb_ccd_ids.append(pdb_ccd_id)
+        molecule_smiles_list.append(molecule_smiles)
+        protein_sequence_list.append(protein_sequences)
+        pdb_path_list.append(protein_file)
+        sdf_path_list.append(ligand_file)
+
+    docking_data = docking_data[docking_data["PDB_CCD_ID"].isin(pdb_ccd_ids)].copy()
+    docking_data["LIGAND_SMILES"] = molecule_smiles_list
+    docking_data["PROTEIN_SEQUENCE"] = protein_sequence_list
+    docking_data["PROTEIN_PDB_PATH"] = pdb_path_list
+    docking_data["LIGAND_SDF_PATH"] = sdf_path_list
+    print("Number of Filtered Astex Data:", len(docking_data))
+
+    # Save the filtered data to a CSV file
+    if not os.path.exists(args.output_folder):
+        os.makedirs(args.output_folder)
+    benchmark_file_name = f"posex_{mode}_benchmark.csv"
+    docking_data.to_csv(os.path.join(args.output_folder, benchmark_file_name), index=False)
+    print(f"Saved PoseX {mode} Benchmark to ", os.path.join(args.output_folder, benchmark_file_name))
+
+
 def main(args: argparse.Namespace):
     if args.dataset == "posebusters":
         generate_posebusters_benchmark(args)
     elif args.dataset == "astex":
         generate_astex_benchmark(args)
+    elif args.dataset == "posex_self_dock":
+        generate_posex_benchmark(args, mode="self_dock")
+    elif args.dataset == "posex_cross_dock":
+        generate_posex_benchmark(args, mode="cross_dock")
     else:
         raise ValueError(f"Unknown dataset: {args.dataset}")
 
