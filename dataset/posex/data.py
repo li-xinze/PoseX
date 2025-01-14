@@ -7,6 +7,7 @@ import itertools
 import subprocess
 import numpy as np
 import pandas as pd
+import networkx as nx
 from pymol import cmd
 from Bio import SeqIO
 from rdkit import Chem
@@ -17,6 +18,7 @@ from multiprocessing import Pool
 from collections import defaultdict
 from posex.align import CrossAlignment
 from Bio.SeqRecord import SeqRecord, Seq
+from networkx.algorithms import bipartite
 from typing import Callable, Literal, Any
 from jinja2 import Environment, FileSystemLoader
 RDLogger.DisableLog('rdApp.*')
@@ -345,37 +347,21 @@ class DatasetGenerator():
                     del self.pdb_ccd_dict[pdbid]
                           
     @sync_filtered_result
-    def filter_with_unique_ccd(self) -> None:
-        """Randomly select PDB entries to get a set with unique ligands
+    def filter_with_unique_pdb_ccd(self) -> None:
+        """Get a set with unique pdbs and ccds by Hopcroft–Karp matching algorithm
         """
-        ccd_pdb_dict = defaultdict(list)
-        [ccd_pdb_dict[ccd].append(pdb) for pdb, ccds in self.pdb_ccd_dict.items() for ccd in ccds]
-        included_ccds, selected_pdbs = set(), set()
-        for ccd, pdbs in ccd_pdb_dict.items():
-            if ccd not in included_ccds:
-                pdb = np.random.choice(pdbs, 1).item()
-                included_ccds |= self.pdb_ccd_dict[pdb]
-                selected_pdbs.add(pdb)
-        tmp_selected_pdbs = selected_pdbs.copy()
-        for pdb in sorted(list(selected_pdbs)):
-            tmp_selected_pdbs.remove(pdb)
-            tmp_ccds = set().union(*[ccd for pdb, ccd in self.pdb_ccd_dict.items() if pdb in tmp_selected_pdbs])
-            if self.pdb_ccd_dict[pdb] - tmp_ccds != set():
-                tmp_selected_pdbs.add(pdb)
-        selected_pdbs = tmp_selected_pdbs
-        self.pdb_ccd_dict = {pdb: ccd for pdb, ccd in self.pdb_ccd_dict.items() if pdb in selected_pdbs}
+        G = nx.Graph()
+        for pdb, ccd_set in self.pdb_ccd_dict.items():
+            for ccd in ccd_set:
+                G.add_edge(pdb, ccd)
+        top_nodes = set(self.ccd_mol_dict.keys())
+        matching = bipartite.maximum_matching(G, top_nodes)
+        pdb_ccd_dict = {}
+        for ccd in top_nodes:
+            if ccd in matching:
+                pdb_ccd_dict[matching[ccd]] = {ccd}
+        self.pdb_ccd_dict = pdb_ccd_dict
 
-    @sync_filtered_result
-    def filter_with_unique_pdb(self) -> None:
-        """Randomly select ligands to get a set with unique PDB entries
-        """
-        selected_ccds = set()
-        for pdb, ccds in self.pdb_ccd_dict.items():
-            valid_ccds = ccds - selected_ccds
-            assert valid_ccds
-            ccd = np.random.choice(list(valid_ccds), 1).item()
-            selected_ccds.add(ccd)
-            self.pdb_ccd_dict[pdb] = set([ccd])
         
     def filter_with_distance(self, 
                              min_dist: float, 
@@ -397,29 +383,27 @@ class DatasetGenerator():
                                                get_ligand_atom_func=get_ligand_atom_func,
                                                get_protein_atom_func=get_protein_atom_func)
         inputs = list(self.pdb_ccd_dict.items())
-        invalid_ccds = set()
         with Pool(processes=num_cpus) as pool:
             pool_iter = pool.imap_unordered(filter_ligand_with_distance_, inputs)
-            for ccds in my_tqdm(pool_iter, total=len(inputs), desc=self._get_func_name(2)):
-                invalid_ccds |= ccds
-        for ccds in invalid_ccds:
-            del self.ccd_mol_dict[ccds]
+            for pdbid, valid_ccds in my_tqdm(pool_iter, total=len(inputs), desc=self._get_func_name(2)):
+                self.pdb_ccd_dict[pdbid] = valid_ccds
+
 
     @sync_filtered_result
-    def filter_with_lignad_protein_distance(self, num_cpus: int = NUM_CPUS) -> None:
+    def filter_with_ligand_protein_distance(self, num_cpus: int = NUM_CPUS) -> None:
         """Intermolecular distance between the ligand(s) of interest and the protein is at least 0.2 Å
         """
         self.filter_with_distance(get_protein_atom_func=get_protein_atoms, min_dist=0.2, num_cpus=num_cpus)
 
     @sync_filtered_result
-    def filter_with_lignad_ligand_distance(self, num_cpus: int = NUM_CPUS) -> None:
+    def filter_with_ligand_ligand_distance(self, num_cpus: int = NUM_CPUS) -> None:
         """Intermolecular distance between ligand and other ligands is at least 5 Å
         """
         get_ligand_atoms_ = partial(get_ligand_atoms, cif_dir=self.cif_dir)
         self.filter_with_distance(get_ligand_atom_func=get_ligand_atoms_, min_dist=5, num_cpus=num_cpus)
 
     @sync_filtered_result
-    def filter_with_lignad_organic_molecule_distance(self, num_cpus: int = NUM_CPUS) -> None:
+    def filter_with_ligand_organic_molecule_distance(self, num_cpus: int = NUM_CPUS) -> None:
         """Intermolecular distance between ligand(s) of interest and other small organic molecules is at least 0.2 Å
         """
         get_organic_molecule_atoms = partial(get_molecule_atoms, 
@@ -428,7 +412,7 @@ class DatasetGenerator():
         self.filter_with_distance(get_ligand_atom_func=get_organic_molecule_atoms, min_dist=0.2, num_cpus=num_cpus)
 
     @sync_filtered_result
-    def filter_with_lignad_metal_ion_distance(self, num_cpus: int = NUM_CPUS) -> None:
+    def filter_with_ligand_metal_ion_distance(self, num_cpus: int = NUM_CPUS) -> None:
         """Intermolecular distance between the ligand(s) of interest and ion metals in complex is at least 0.2 Å
         """
         get_metal_ion_atoms = partial(get_molecule_atoms,
@@ -523,11 +507,11 @@ class DatasetGenerator():
         else:
             pass
         # reselect representative_pdb
-        new_cluster_map = {}
+        new_cluster_map_except_k = {}
         for pdbs in cluster_map.values():
-            representative_pdb = sorted(list(pdbs))[0]
-            new_cluster_map[representative_pdb] = pdbs
-        new_cluster_map_except_k = {k: v - set([k]) for k, v in new_cluster_map.items()}
+            pdbs = sorted(pdbs)
+            representative_pdb = pdbs[0]
+            new_cluster_map_except_k[representative_pdb] = pdbs[1:]
         if self.mode == "self_dock":
             self.pdb_ccd_dict = {pdb: ccd for pdb, ccd in self.pdb_ccd_dict.items() if pdb in new_cluster_map_except_k.keys()}
         elif self.mode == "cross_dock":
@@ -731,19 +715,18 @@ class DatasetGenerator():
         self.filter_with_stereo_outliers()
         self.filter_with_intermolecular_clashes()
         self.select_single_conformation()
-        self.filter_with_lignad_protein_distance()
+        self.filter_with_ligand_protein_distance()
         if self.mode == "cross_dock":
-            self.filter_with_lignad_ligand_distance()
+            self.filter_with_ligand_ligand_distance()
             self.filter_with_crystal_contact()
             cluster_map = self.filter_with_clustering()
             cross_groups = self.filter_with_cross_alignment(cluster_map)
             self.save_cross_dock_res(cross_groups)
         elif self.mode == "self_dock":
-            self.filter_with_lignad_organic_molecule_distance()
-            self.filter_with_lignad_metal_ion_distance()
+            self.filter_with_ligand_organic_molecule_distance()
+            self.filter_with_ligand_metal_ion_distance()
             self.filter_with_crystal_contact()
-            self.filter_with_unique_ccd()
-            self.filter_with_unique_pdb()
+            self.filter_with_unique_pdb_ccd()
             self.filter_with_clustering()
             self.save_self_dock_res()
         else:

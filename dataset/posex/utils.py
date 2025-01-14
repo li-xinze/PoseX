@@ -154,9 +154,11 @@ def generate_conformation(mol: Chem.Mol, max_attempts=0) -> tuple[int, Chem.Mol]
 def check_ETKDG(inputs, max_attempts: int = 0) -> tuple[str, bool]:
     """Check if starting conformation could be generated with ETKDGv3
     """
-    ccd, mol = inputs
-    res, mol = generate_conformation(mol, max_attempts)
-    is_valid = res != -1
+    ccd, input_mol = inputs
+    input_mol = Chem.RemoveHs(input_mol)
+    res, mol = generate_conformation(input_mol, max_attempts)
+    mol = Chem.RemoveHs(mol)
+    is_valid = (res != -1) & (input_mol.GetNumAtoms() == mol.GetNumAtoms())
     return ccd, is_valid
     
 def has_unknown_atoms(pdbid, cif_dir) -> tuple[str ,bool]:
@@ -326,7 +328,7 @@ def filter_ligand_with_distance(inputs: tuple[str, set],
         set: invalid ccd set
     """
     pdbid, ccds = inputs
-    invalid_ccds = set()
+    valid_ccds = set()
     cif_path = os.path.join(cif_dir, f"{pdbid}.cif")
     parser = MMCIFParser(auth_chains=False)
     protein = parser.get_structure("protein", cif_path)[0]
@@ -350,9 +352,9 @@ def filter_ligand_with_distance(inputs: tuple[str, set],
                         if ns.search(atom.coord, min_dist, 'A'):
                             is_geq_limit = True
                             break
-        if is_geq_limit:
-            invalid_ccds.add(ccd)               
-    return invalid_ccds
+        if not is_geq_limit:
+            valid_ccds.add(ccd)               
+    return pdbid, valid_ccds
 
 def get_covalent_ligands(inputs: tuple[str, set], cif_dir: str) -> tuple[str, list]:
     """Extract covalent ligands from a given ccd set

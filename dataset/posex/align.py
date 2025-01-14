@@ -53,34 +53,25 @@ class CrossAlignment():
             dict[tuple[str, str], str]: candidate_items(dict[tuple[pdb, ccd], ccd_asym_id])
         """
         candidate_items = {}
-        block_item_set = set()
-        for asym_id in asym_ids:
-            ref_lig = f"{ref_pdb}_{ref_ccd}_{asym_id}"
-            cmd.select(ref_lig, f"resn {ref_ccd} and segi {asym_id} and {ref_pdb}")
-            # set to list since the following loop result depends on the order
-            valid_pdb_list = sorted(list(valid_pdb_set))
-            for other_pdb in valid_pdb_list:
-                for cand_ccd in self.pdb_ccd_dict[other_pdb]:
-                    cand_ccd_asym_ids = self.pdb_ccd_instance_map[other_pdb][cand_ccd]
-                    if cand_ccd == ref_ccd: continue
-                    cand_item = (other_pdb, cand_ccd)
-                    is_cand_ccd_valid = False
-                    for cand_ccd_asym_id in cand_ccd_asym_ids:
+        for cand_pdb in sorted(valid_pdb_set):
+            for cand_ccd in self.pdb_ccd_dict[cand_pdb]:
+                if cand_ccd == ref_ccd: continue
+                cand_ccd_asym_ids = self.pdb_ccd_instance_map[cand_pdb][cand_ccd]
+                hit_asym_ids = set()
+                for cand_ccd_asym_id in cand_ccd_asym_ids:
+                    for asym_id in asym_ids:
+                        ref_lig = f"{ref_pdb}_{ref_ccd}_{asym_id}"
                         res_name = f"{ref_lig}_{cand_ccd}_{cand_ccd_asym_id}"
-                        cmd.select(res_name, f"resn {cand_ccd}  and segi {cand_ccd_asym_id} and ({other_pdb} within 4.0 of {ref_lig})")
-                        if cmd.count_atoms(res_name) > 0 and cand_item not in block_item_set:
-                            is_cand_ccd_valid = True
-                            if cand_item not in candidate_items:
-                                candidate_items[cand_item] = cand_ccd_asym_id
-                            cmd.delete(res_name)
-                            break
-                        else:
-                            cmd.delete(res_name)
-                    if not is_cand_ccd_valid:
-                        block_item_set.add(cand_item)
-                        if cand_item in candidate_items:
-                            del candidate_items[cand_item]
-            cmd.delete(ref_lig)
+                        cmd.select(ref_lig, f"resn {ref_ccd} and segi {asym_id} and {ref_pdb}")
+                        cmd.select(res_name, f"resn {cand_ccd}  and segi {cand_ccd_asym_id} and ({cand_pdb} within 4.0 of {ref_lig})")
+                        if cmd.count_atoms(res_name) > 0:
+                            hit_asym_ids.add(asym_id)
+                            if asym_id == asym_ids[0]:
+                                selelcted_cand_ccd_asym_id = cand_ccd_asym_id
+                        cmd.delete(res_name)
+                        cmd.delete(ref_lig)
+                if len(hit_asym_ids) == len(asym_ids):
+                    candidate_items[(cand_pdb, cand_ccd)] = selelcted_cand_ccd_asym_id
         return candidate_items
 
     def check_lig_from_reference_to_candidate(self, 
@@ -179,7 +170,7 @@ class CrossAlignment():
                 cmd.delete(pdb)
         return valid_pdb_set
     
-    def run(self) -> set[list[tuple[str, str, str]]]:
+    def run(self) -> set[tuple[tuple[str, str, str]]]:
         """Return a set of cross groups, each cross group contains tuple of (pdb, ccd, asym_id)
         """
         cross_groups = set()
