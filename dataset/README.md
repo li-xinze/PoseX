@@ -21,3 +21,37 @@
 
 *Outputs*:
 - dataset in a folder named `${mode}`
+
+
+## Generate Custom Dataset 
+
+    python create_custom_set.py
+
+*Inputs*:
+- `--name`: dataset name.
+- `--pdb_ccd_path`: Path to the txt file containing items of f"{PDBID}_{CCDID}".
+- `--download_dir`: Folder to save the downloaded files.
+
+*Outputs*:
+- dataset in a folder named `${name}`
+
+
+## Directory Structure
+```plaintext
+.
+├── create_custom_set.py    # Create custom dataset 
+├── main.py                 # Entry point
+├── posex
+│   ├── align.py            # Cross alignment module
+│   ├── ccd.py              # CCD utils module
+│   ├── data.py             # Dataset generator module
+│   ├── mmcif.py            # MMCIF parser module
+│   ├── preprocess.py       # Dataset preprocessor module
+│   └── utils.py            # Utils module
+└── template
+    ├── ccd_query.txt       # CCD query JSON template 
+    ├── cross_dock.txt      # Cross-dock table Jinja2 template 
+    ├── self_dock.txt       # Self-dock table Jinja2 template 
+    └── vs_query.txt        # Validation score query JSON template 
+
+```

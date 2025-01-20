@@ -3,9 +3,12 @@ import shutil
 import inspect
 import tempfile
 import pandas as pd
+import biotite.structure.io.pdbx as pdbx
+
 from tqdm import tqdm
 from rdkit import Chem
 from Bio.PDB import is_aa
+from functools import wraps
 from functools import partial
 from Bio.PDB.Atom import Atom
 from Bio.PDB.Model import Model
@@ -13,14 +16,46 @@ from rdkit.Chem import AllChem
 from multiprocessing import Pool
 from typing import Callable, Literal
 from Bio.PDB import MMCIFParser, MMCIFIO
-import biotite.structure.io.pdbx as pdbx
+from dataclasses import dataclass, fields
 from pdbecif.mmcif_io import CifFileReader
 from Bio.PDB import Selection, NeighborSearch
 from rcsb.utils.io.MarshalUtil import MarshalUtil
 
+
 NUM_CPUS = 100
 PERIODIC_TABLE = Chem.GetPeriodicTable()
 ELEMENT_TABLE = set([PERIODIC_TABLE.GetElementSymbol(atomic_num).upper() for atomic_num in range(1, 119)])
+
+
+@dataclass
+class DownloadConfig:
+    """Download directory configuration
+
+    Attributes
+        download_dir: str, folder to save the downloaded files
+        ccd_dir : str, default="ccd", subfolder to save ccd files
+        ccd_path: str, default="ccd.csv", path to save ccd table
+        bcif_dir: str, default="bcif", subfolder to save pdb entries (bcif format)
+        cif_dir: str, default="cif", subfolder to save pdb entries (cif format)
+        vs_dir: str, default="entry", subfolder to save json files containing validation scores
+        lig_dir: str, default="ligand", subfolder to save extracted ligands
+        molecule_dir: str,  default="molecule", subfolder to save extracted molecules (organic molecule, metal ion)
+    """
+    download_dir: str
+    ccd_dir: str = "ccd"   
+    ccd_path: str = "ccd/ccd.csv"  
+    components_path: str = "ccd/components.cif"  
+    bcif_dir: str = "bcif"  
+    cif_dir: str = "cif"   
+    vs_dir: str = "entry"   
+    lig_dir: str = "ligand"        
+    molecule_dir: str = "molecule" 
+    
+    def __post_init__(self) -> None:
+        for field in (fields(self)):
+            if field.name != "download_dir":
+                abs_path = os.path.join(self.download_dir, field.default)
+                self.__setattr__(field.name, abs_path)
 
 
 class my_tqdm(tqdm):
@@ -30,30 +65,7 @@ class my_tqdm(tqdm):
         kwargs['bar_format'] = "{l_bar}{bar:5}{r_bar}"
         kwargs['leave'] = False
         super(my_tqdm, self).__init__(*args, **kwargs)
-    
 
-def create_pdb_ccd_instance_map(pdbid_list: list, 
-                                cif_dir: str, 
-                                num_cpus: int = NUM_CPUS
-                                ) -> dict[str, dict[str, list[str]]]:
-    """Create a dict of pdb to a dict of ccd to list of asym_ids
-
-    Args:
-        pdbid_list (list): list of PDBID
-        cif_dir (str): folder containing pdb entries (cif format)
-
-    Returns:
-        dict[str, dict[str, list[str]]]:
-            dict of pdb to dict of ccd to list of asym_ids
-    """
-    pdb_ccd_instance_map = {}
-    get_ccd_instance_map_ = partial(get_ccd_instance_map, cif_dir=cif_dir)
-    func_name = inspect.stack()[0].function
-    with Pool(processes=num_cpus) as pool:
-        pool_iter = pool.imap_unordered(get_ccd_instance_map_, pdbid_list)
-        for pdbid, ccd_instance_map in my_tqdm(pool_iter, total=len(pdbid_list), desc=func_name):
-            pdb_ccd_instance_map[pdbid] = ccd_instance_map
-    return pdb_ccd_instance_map
     
 def get_ccd_instance_map(pdbid, cif_dir):
     """Create a dict of ccd to list of asym_ids
@@ -85,6 +97,7 @@ def get_ccd_instance_map(pdbid, cif_dir):
 def run_in_tmp_dir(func: Callable) -> Callable:
     """A wrapper for running a function in tmp dir
     """
+    @wraps(func)
     def wrapper(*args, **kwargs):
         tmp_dir = next(tempfile._get_candidate_names())
         os.makedirs(tmp_dir, exist_ok=True)
@@ -102,6 +115,7 @@ def run_in_tmp_dir(func: Callable) -> Callable:
 def supress_stdout(func: Callable) -> Callable:
     """A wrapper for muting a funciton
     """
+    @wraps(func)
     def wrapper(*args, **kwargs):
         with open(os.devnull, 'w') as devnull:
             old_stdout = os.dup(1)
@@ -111,7 +125,6 @@ def supress_stdout(func: Callable) -> Callable:
             finally:
                 os.dup2(old_stdout, 1)  
         return result
-    wrapper.__name__ = func.__name__
     return wrapper
 
 def bcif2cif(bcif_file: str, bcif_dir: str, cif_dir: str) -> tuple[str, bool]:
@@ -191,9 +204,10 @@ def cif2seq(pdbid, cif_dir, chain_sep="") -> tuple[str, str]:
     category = cif.block["entity_poly"]
     category_dict = {k: column.as_array() for k, column in category.items()}
     df_entity_poly = pd.DataFrame(category_dict, dtype=str)
-    seqs = df_entity_poly["pdbx_seq_one_letter_code_can"].values
-    entity_ids = df_entity_poly["entity_id"].values
-    pdbx_strand_id = df_entity_poly["pdbx_strand_id"].values
+    df_entity_polypeptide = df_entity_poly[df_entity_poly["type"] == "polypeptide(L)"]
+    seqs = df_entity_polypeptide["pdbx_seq_one_letter_code_can"].values
+    entity_ids = df_entity_polypeptide["entity_id"].values
+    pdbx_strand_id = df_entity_polypeptide["pdbx_strand_id"].values
     for entity_id, chains, seq in zip(entity_ids, pdbx_strand_id, seqs):
         for chain in chains.split(","):
             seq_dict[f"{entity_id}_{chain}"] = seq.replace("\n", "")

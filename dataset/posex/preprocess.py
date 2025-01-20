@@ -12,7 +12,7 @@ from multiprocessing import Pool
 from collections import defaultdict
 from posex.utils import bcif2cif, my_tqdm
 from pdbecif.mmcif_io import CifFileReader
-from posex.utils import run_in_tmp_dir, create_pdb_ccd_instance_map
+from posex.utils import run_in_tmp_dir, get_ccd_instance_map
 
 
 NUM_CPUS = 100
@@ -24,9 +24,9 @@ class DataPreprocessor():
     A class for downloading and preprocessing data
 
     Args:
-        pdbid_path : path to the downloaded txt file contaning Entry IDs
+        pdbid_list : list of pdbids
     """
-    def __init__(self, pdbid_path: str, **kwargs: Any):
+    def __init__(self, pdbid_list: list[str], **kwargs: Any):
         self.bcif_dir = kwargs.get("bcif_dir")
         self.cif_dir = kwargs.get("cif_dir")
         self.vs_dir = kwargs.get("vs_dir")
@@ -34,10 +34,9 @@ class DataPreprocessor():
         self.ccd_path = kwargs.get("ccd_path")
         self.lig_dir = kwargs.get("lig_dir")
         self.molecule_dir = kwargs.get("molecule_dir")
-        with open(pdbid_path, "r") as f:
-            self.pdbid_list = f.readline().strip().split(",")
+        self.components_path = kwargs.get("components_path")
+        self.pdbid_list = pdbid_list
         
-
     def _get_func_name(self, idx=1) -> str:
         """return the name of a funciton in the current call stack
         """
@@ -119,24 +118,20 @@ class DataPreprocessor():
         """Download components.cif
         """
         os.makedirs(self.ccd_dir, exist_ok=True)
-        components_path = os.path.join(self.ccd_dir, "components.cif")
-        if not os.path.exists(components_path):
+        if not os.path.exists(self.components_path):
             print("downloading components.cif...")
             url = "https://files.wwpdb.org/pub/pdb/data/monomers/components.cif"
             subprocess.run(["wget", url], cwd=self.ccd_dir, check=True)
             print("finish")
-        component_path = os.path.join(self.ccd_dir, "components.cif")
-        print("reading components.cif...")
         print("finish")
-        return component_path
 
     def build_ccd_table(self) -> None:
         """Create a ccd table and save it to self.ccd_path
         """
         if not os.path.exists(self.ccd_path):
-            component_path = self._download_ccd_dict()
+            self._download_ccd_dict()
             cfr = CifFileReader()
-            cif_obj = cfr.read(component_path, ignore = ['_atom_site'])
+            cif_obj = cfr.read(self.components_path, ignore = ['_atom_site'])
             df_dict = defaultdict(list)
             for ccd, values in cif_obj.items():
                 if ccd == "UNL": continue
@@ -184,50 +179,21 @@ class DataPreprocessor():
         df.to_csv(self.ccd_path, na_rep=None, index=False)
 
     @run_in_tmp_dir
-    def extract_ligand(self) -> dict[str, dict[str, list[str]]]:
-        """Extract sdf files of all ligands from cif files
+    def download_ligand(self, num_cpus=20) -> dict[str, dict[str, list[str]]]:
+        """Download sdf files from rcsb
 
         Returns:
             dict[str, dict[str, list[str]]]:
                 dict of pdb to dict of ccd to list of asym_ids
         """
-        pdb_ccd_instance_map = create_pdb_ccd_instance_map(self.pdbid_list, self.cif_dir)
-        os.makedirs(self.lig_dir, exist_ok=True)
-        for pdb, ccd_dict in my_tqdm(pdb_ccd_instance_map.items(), desc=self._get_func_name()):
-            cif_path = os.path.join(self.cif_dir, f'{pdb}.cif')
-            skip = True
-            for ccd in ccd_dict:
-                ligand_path = f"{self.lig_dir}/{pdb}_{ccd}.sdf"
-                if not os.path.exists(ligand_path):
-                    skip = False
-                    break
-            if skip:
-                continue
-            cmd.load(cif_path, pdb)
-            for ccd, asym_ids in ccd_dict.items():
-                ligand_path = f"{self.lig_dir}/{pdb}_{ccd}.sdf"
-                mols = []
-                for asym_id in asym_ids:
-                    ligand_id = f"ligand_{asym_id}"
-                    tmp_ligand_path = f"{self.lig_dir}/{ligand_id}.sdf"
-                    cmd.select(ligand_id, f"resn {ccd} and segi {asym_id} and {pdb}")
-                    cmd.save(tmp_ligand_path, ligand_id)
-                    mol = Chem.SDMolSupplier(tmp_ligand_path)[0]
-                    if mol is not None:
-                        mols.append(mol)
-                    else:
-                        # All ligand SDF files can be loaded with RDKit and pass its sanitization
-                        mols = []
-                        break
-                    os.remove(tmp_ligand_path)
-                    cmd.delete(ligand_id)
-                w = Chem.SDWriter(ligand_path)
-                for mol in mols:
-                    w.write(mol)
-                w.close()
-            cmd.delete("all")
+        pdb_ccd_instance_map = {}
+        fetch_ligands_ = partial(fetch_ligands, cif_dir=self.cif_dir, lig_dir=self.lig_dir)
+        with Pool(processes=num_cpus) as pool:
+            pool_iter = pool.imap_unordered(fetch_ligands_, self.pdbid_list)
+            for pdb, ccd_instance_map in my_tqdm(pool_iter, total=len(self.pdbid_list), desc="downloading ligand"):
+                pdb_ccd_instance_map[pdb] = ccd_instance_map
         return pdb_ccd_instance_map
-
+        
     @run_in_tmp_dir
     def extract_molecule(self) -> None:
         """Extract sdf files of organic_molecule and metal_ion from cif files
@@ -258,5 +224,42 @@ class DataPreprocessor():
         self.download_validation_score()
         self.build_ccd_table()
         self.extract_molecule()
-        pdb_ccd_instance_map = self.extract_ligand()
+        pdb_ccd_instance_map = self.download_ligand()
         return pdb_ccd_instance_map
+
+def fetch_ligands(pdb, cif_dir, lig_dir):
+    _, ccd_instance_map = get_ccd_instance_map(pdb, cif_dir)
+    for ccd, asym_ids in ccd_instance_map.items():
+        mols = []
+        ligand_path = f"{lig_dir}/{pdb}_{ccd}.sdf"
+        if os.path.exists(ligand_path):
+            continue
+        for asym_id in asym_ids:
+            instance_name = f"{pdb}_{ccd}_{asym_id}"
+            tmp_ligand_path = f"{lig_dir}/{instance_name}.sdf"
+            url = f"https://models.rcsb.org/v1/{pdb}/ligand?label_comp_id={ccd}&label_asym_id={asym_id}&encoding=sdf"
+            try:
+                r = requests.get(url)
+                open(tmp_ligand_path , 'wb').write(r.content)
+            except Exception as e:
+                print(e, pdb, ccd, asym_id)
+            mol = Chem.SDMolSupplier(tmp_ligand_path)[0]
+            os.remove(tmp_ligand_path)
+            if mol is not None:
+                params = Chem.RemoveHsParameters()
+                params.removeDegreeZero = True
+                mol = Chem.RemoveHs(mol, params)
+                props = list(mol.GetPropNames())
+                for prop in props:
+                    mol.ClearProp(prop)
+                mol.SetProp('_Name', instance_name)
+                mols.append(mol)
+            else:
+                # All ligand SDF files can be loaded with RDKit and pass its sanitization
+                mols = []
+                break
+        w = Chem.SDWriter(ligand_path)
+        for mol in mols:
+            w.write(mol)
+        w.close()
+    return pdb, ccd_instance_map

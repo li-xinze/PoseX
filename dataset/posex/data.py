@@ -5,17 +5,19 @@ import shutil
 import inspect
 import itertools
 import subprocess
-import numpy as np
 import pandas as pd
 import networkx as nx
-from pymol import cmd
 from Bio import SeqIO
 from rdkit import Chem
 from rdkit import RDLogger
+from functools import wraps
 from functools import partial
+from pymol import cmd, stored
 from Bio.PDB.Model import Model
 from multiprocessing import Pool
 from collections import defaultdict
+from posex import ccd
+from rdkit.Geometry import Point3D
 from posex.align import CrossAlignment
 from Bio.SeqRecord import SeqRecord, Seq
 from networkx.algorithms import bipartite
@@ -26,6 +28,7 @@ from posex.utils import my_tqdm
 from posex.utils import get_covalent_ligands, get_ligand_atoms, get_molecule_atoms, get_protein_atoms, \
     has_unknown_atoms, filter_ligand_with_distance, check_ETKDG, save_single_conformation, cif2seq, generate_conformation
 from posex.utils import supress_stdout, run_in_tmp_dir
+from posex.mmcif import cif_to_seq
 
 
 PDB_BLOCKLIST = ["7X48", "7UYC", "7WJD", "7DB4", "6ZYU", "7W2W", "7ZSQ", "8AVA"]
@@ -57,6 +60,7 @@ class DatasetGenerator():
         self.mode = mode
         vs_dir = kwargs.get("vs_dir")
         ccd_path = kwargs.get("ccd_path")
+        components_path = kwargs.get("components_path")
         self.cif_dir = kwargs.get("cif_dir")
         self.lig_dir = kwargs.get("lig_dir")
         self.molecule_dir = kwargs.get("molecule_dir")
@@ -68,6 +72,7 @@ class DatasetGenerator():
         self.pdb_ccd_dict = self._create_pdb_ccd_dict()
         self.ccd_mol_dict = self._create_ccd_mol_dict()
         self.filter_record = self._init_filter_record()
+        ccd.COMPONENTS_FILE = components_path
         
 
     def _init_filter_record(self):
@@ -152,6 +157,7 @@ class DatasetGenerator():
         self.ccd_mol_dict = {k: v for k, v in self.ccd_mol_dict.items() if k in ccd_values}
         
     def sync_filtered_result(func) -> Callable:
+        @wraps(func)
         def wrapper(self, *args, **kwargs):
             result = func(self, *args, **kwargs)
             self.sync_dict()
@@ -362,7 +368,6 @@ class DatasetGenerator():
                 pdb_ccd_dict[matching[ccd]] = {ccd}
         self.pdb_ccd_dict = pdb_ccd_dict
 
-        
     def filter_with_distance(self, 
                              min_dist: float, 
                              get_ligand_atom_func: Callable[[str, str], list] | None = None, 
@@ -387,7 +392,6 @@ class DatasetGenerator():
             pool_iter = pool.imap_unordered(filter_ligand_with_distance_, inputs)
             for pdbid, valid_ccds in my_tqdm(pool_iter, total=len(inputs), desc=self._get_func_name(2)):
                 self.pdb_ccd_dict[pdbid] = valid_ccds
-
 
     @sync_filtered_result
     def filter_with_ligand_protein_distance(self, num_cpus: int = NUM_CPUS) -> None:
@@ -549,35 +553,6 @@ class DatasetGenerator():
         with open(output_path, "w") as f:
             f.write(latex_output)
 
-    def _save_ligand_sdf(self, sdf_path: str, pdb: str, ccd: str, selected_asym_id: str | None = None) -> None:
-        """Save one or all ligand instances to a sdf file
-
-        Args:
-            sdf_path (str): path to save the sdf file
-            pdb (str): PDBID
-            ccd (str): CCD
-            selected_asym_id (str | None): if None, save all instances
-        """
-        item_dir = os.path.dirname(sdf_path)
-        w = Chem.SDWriter(sdf_path)
-        for asym_id in self.pdb_ccd_instance_map[pdb][ccd]:
-            if selected_asym_id is not None and asym_id != selected_asym_id: continue 
-            ligand_id = f"{ccd}_{asym_id}"
-            tmp_ligand_path = f"{item_dir}/{ligand_id}.sdf"
-            cmd.select(ligand_id, f"resn {ccd} and segi {asym_id} and {pdb}")
-            cmd.save(tmp_ligand_path, ligand_id)
-            cmd.sync()
-            mol = Chem.SDMolSupplier(tmp_ligand_path)[0]
-            params = Chem.RemoveHsParameters()
-            params.removeDegreeZero = True
-            mol = Chem.RemoveHs(mol, params)
-            w.write(mol)
-            os.remove(tmp_ligand_path)
-            if selected_asym_id is None:
-                cmd.extract(ligand_id, ligand_id)
-            cmd.delete(ligand_id)
-        w.close()
-
     @run_in_tmp_dir
     @supress_stdout
     def save_cross_dock_res(self, cross_groups: set[tuple[tuple[str, str, str]]]) -> None:
@@ -604,10 +579,38 @@ class DatasetGenerator():
                 cmd.load(cif_path, cand_pdb)
                 cmd.align(f"{cand_pdb}////CA", f"{ref_name}////CA")
                 cmd.remove("solvent")
+                cmd.select(cand_ccd, f"not polymer and resn {cand_ccd} and {cand_pdb}")
+                cmd.extract(cand_ccd, cand_ccd)
+                cmd.delete(cand_ccd)
                 ligand_sdf_path = f"{item_dir}/{item_name}_ligand.sdf"
                 ligands_sdf_path = f"{item_dir}/{item_name}_ligands.sdf"
-                self._save_ligand_sdf(ligand_sdf_path, cand_pdb, cand_ccd, cand_ccd_asym_id)
-                self._save_ligand_sdf(ligands_sdf_path, cand_pdb, cand_ccd)
+                raw_ligands_sdf_path = f"{self.lig_dir}/{item_name}.sdf"
+                mols = list(Chem.SDMolSupplier(raw_ligands_sdf_path))
+                cmd.load(raw_ligands_sdf_path, "ligands")
+                # Transform ligands
+                cmd.matrix_copy(cand_pdb, "ligands")
+                stored.coords = []
+                cmd.iterate_state(0, "ligands", "stored.coords.append((x, y, z))")
+                i = 0
+                for mol in mols:
+                    conformer = mol.GetConformer()
+                    for j in range(mol.GetNumAtoms()):
+                        x, y, z = stored.coords[i]
+                        i += 1
+                        conformer.SetAtomPosition(j, Point3D(x, y, z))
+                with Chem.SDWriter(ligands_sdf_path) as f:
+                    for mol in mols:
+                        f.write(mol)
+                instance_name = f"{cand_pdb}_{cand_ccd}_{cand_ccd_asym_id}"
+                selected_mol = None
+                for mol in mols:
+                    if mol.GetProp('_Name') == instance_name:
+                        selected_mol = mol
+                        break
+                assert selected_mol is not None
+                with Chem.SDWriter(ligand_sdf_path) as f:
+                    f.write(selected_mol)
+
                 pdb_save_path = f"{item_dir}/{item_name}_protein.pdb"
                 cif_save_path = f"{item_dir}/{item_name}_protein.cif"
                 cmd.save(pdb_save_path, cand_pdb)
@@ -620,7 +623,6 @@ class DatasetGenerator():
         """
         cross_dock_dir = self.output_dir
         unfold_cross_dock_dir = self.output_dir
-        pair_ids = []
         for group_name in my_tqdm(os.listdir(cross_dock_dir), desc=self._get_func_name()):
             group_dir = os.path.join(cross_dock_dir, group_name)
             pair_perms = list(itertools.permutations(os.listdir(group_dir), 2))
@@ -628,40 +630,51 @@ class DatasetGenerator():
                 ref_item, item = pair
                 item_dir = os.path.join(group_dir, item)
                 ref_item_dir = os.path.join(group_dir, ref_item)
-                pair_name = f"{ref_item}_{item}"
-                pair_ids.append(pair_name)
+                ref_ccd = ref_item.split("_")[1]
+                pdb = item.split("_")[0]
+                pair_name = f"{pdb}_{ref_ccd}"
                 pair_dir = os.path.join(unfold_cross_dock_dir, pair_name)
                 os.makedirs(pair_dir, exist_ok=True)
                 ref_protein_pdb = os.path.join(ref_item_dir, f"{ref_item}_protein.pdb")
-                ref_protein_cif = os.path.join(ref_item_dir, f"{ref_item}_protein.cif")
                 ref_ligand_sdf = os.path.join(ref_item_dir, f"{ref_item}_ligand.sdf")
                 ref_ligands_sdf = os.path.join(ref_item_dir, f"{ref_item}_ligands.sdf")
                 protein_pdb = os.path.join(item_dir, f"{item}_protein.pdb")
                 protein_cif = os.path.join(item_dir, f"{item}_protein.cif")
                 pair_ref_protein_pdb = os.path.join(pair_dir, f"{pair_name}_ref_protein.pdb")
-                pair_ref_protein_cif = os.path.join(pair_dir, f"{pair_name}_ref_protein.cif")
                 pair_protein_pdb = os.path.join(pair_dir, f"{pair_name}_protein.pdb")
-                pair_protein_cif = os.path.join(pair_dir, f"{pair_name}_protein.cif")
                 pair_ligand_sdf = os.path.join(pair_dir, f"{pair_name}_ligand.sdf")
                 pair_ligands_sdf = os.path.join(pair_dir, f"{pair_name}_ligands.sdf")
                 shutil.copy(ref_protein_pdb, pair_ref_protein_pdb)
-                shutil.copy(ref_protein_cif, pair_ref_protein_cif)
                 shutil.copy(protein_pdb, pair_protein_pdb)
-                shutil.copy(protein_cif, pair_protein_cif)
                 shutil.copy(ref_ligand_sdf, pair_ligand_sdf)
                 shutil.copy(ref_ligands_sdf, pair_ligands_sdf)
                 # write group id
                 group_id_path = os.path.join(pair_dir, "group_id.txt")
                 with open(group_id_path, "w") as f:
+                    f.write(ref_item + "\n")
                     f.write(group_name)
                 # write mol start conf 
                 mol = Chem.SDMolSupplier(ref_ligand_sdf)[0]
-                ligand_start_conf_sdf = os.path.join(pair_dir, f"{ref_item}_ligand_start_conf.sdf")
-                res, mol = generate_conformation(mol)
-                assert res != -1
-                w = Chem.SDWriter(ligand_start_conf_sdf)
-                w.write(mol)
-                w.close()
+                smiles = Chem.MolToSmiles(mol)
+                ligand_start_conf_sdf_path = os.path.join(pair_dir, f"{pair_name}_ligand_start_conf.sdf")
+                with Chem.SDWriter(ligand_start_conf_sdf_path) as f:
+                    res, start_mol = generate_conformation(mol)
+                    assert res != -1
+                    f.write(start_mol)
+
+                # save AF3 input json file
+                task_dict = cif_to_seq(protein_cif)
+                task_dict["sequences"].append({
+                    "ligand": {
+                        "id": "Z",
+                        "smiles": smiles
+                    }
+                })
+                task_dict["modelSeeds"] = [42]
+                task_dict["dialect"] = "alphafold3"
+                task_dict["version"] = 1
+                with open(os.path.join(pair_dir, f"{pair_name}.json"), "w") as f:
+                    json.dump(task_dict, f, indent=2)
             shutil.rmtree(group_dir)
        
     @run_in_tmp_dir
@@ -672,32 +685,52 @@ class DatasetGenerator():
         cmd.reinitialize()
         os.makedirs(self.output_dir)
         for pdb, ccd_set in self.pdb_ccd_dict.items():
-            assert len(ccd_set) == 1
-            ccd = ccd_set.pop()
-            asym_ids = self.pdb_ccd_instance_map[pdb][ccd]
-            item_name = f"{pdb}_{ccd}"
-            item_dir = os.path.join(self.output_dir, item_name)
-            os.makedirs(item_dir)
-            cif_path = os.path.join(self.cif_dir, f"{pdb}.cif")
-            cmd.load(cif_path, pdb)
-            cmd.remove("solvent")
-            ligand_sdf_path = f"{item_dir}/{item_name}_ligand.sdf"
-            ligands_sdf_path = f"{item_dir}/{item_name}_ligands.sdf"
-            self._save_ligand_sdf(ligand_sdf_path, pdb, ccd, asym_ids[0])
-            self._save_ligand_sdf(ligands_sdf_path, pdb, ccd)
-            pdb_save_path = f"{item_dir}/{item_name}_protein.pdb"
-            cif_save_path = f"{item_dir}/{item_name}_protein.cif"
-            cmd.save(pdb_save_path, pdb)
-            shutil.copy(cif_path, cif_save_path)
-            cmd.delete("all")
-            # write mol start conf 
-            mol = Chem.SDMolSupplier(ligand_sdf_path)[0]
-            ligand_start_conf_sdf = f"{item_dir}/{item_name}_ligand_start_conf.sdf"
-            res, mol = generate_conformation(mol)
-            assert res != -1
-            w = Chem.SDWriter(ligand_start_conf_sdf)
-            w.write(mol)
-            w.close()
+            for ccd in ccd_set:
+                item_name = f"{pdb}_{ccd}"
+                item_dir = os.path.join(self.output_dir, item_name)
+                os.makedirs(item_dir)
+                cif_path = os.path.join(self.cif_dir, f"{pdb}.cif")
+                cmd.load(cif_path, pdb)
+                cmd.remove("solvent")
+                cmd.select(ccd, f"not polymer and resn {ccd} and {pdb}")
+                cmd.extract(ccd, ccd)
+                cmd.delete(ccd)
+                ligand_sdf_path = f"{item_dir}/{item_name}_ligand.sdf"
+                ligands_sdf_path = f"{item_dir}/{item_name}_ligands.sdf"
+                ligand_start_conf_sdf_path = f"{item_dir}/{item_name}_ligand_start_conf.sdf"
+                raw_ligands_sdf_path = f"{self.lig_dir}/{item_name}.sdf"
+                shutil.copy(raw_ligands_sdf_path, ligands_sdf_path)
+                pdb_save_path = f"{item_dir}/{item_name}_protein.pdb"
+                cmd.save(pdb_save_path, pdb)
+                cmd.delete("all")
+                mol = Chem.SDMolSupplier(ligands_sdf_path)[0]
+                smiles = Chem.MolToSmiles(mol)
+                with Chem.SDWriter(ligand_sdf_path) as f:
+                    f.write(mol)
+                # write mol start conf 
+                with Chem.SDWriter(ligand_start_conf_sdf_path) as f:
+                    res, start_mol = generate_conformation(mol)
+                    assert res != -1
+                    f.write(start_mol)
+
+                # save AF3 input json file
+                task_dict = cif_to_seq(cif_path)
+                task_dict["sequences"].append({
+                    "ligand": {
+                        "id": "Z",
+                        "smiles": smiles
+                    }
+                })
+                task_dict["modelSeeds"] = [42]
+                task_dict["dialect"] = "alphafold3"
+                task_dict["version"] = 1
+                with open(os.path.join(item_dir, f"{item_name}.json"), "w") as f:
+                    json.dump(task_dict, f, indent=2)
+
+
+                    
+    def set_pdb_ccd_dict(self, pdb_ccd_dict) -> None:
+        self.pdb_ccd_dict = pdb_ccd_dict
 
     def run(self):
         self.filter_with_unknown_ccd()
