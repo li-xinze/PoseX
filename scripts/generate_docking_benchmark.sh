@@ -11,6 +11,6 @@ fi
 DATASET="$1"
 
 python scripts/generate_docking_benchmark.py \
-    --input_folder data/dataset \
+    --input_folder data/dataset/posex \
     --output_folder data/benchmark/${DATASET} \
     --dataset ${DATASET}

@@ -5,7 +5,7 @@
 if [ $# -ne 2 ]; then
     echo "Error: Missing arguments"
     echo "Usage: $0 <dataset> <model_type>"
-    echo "Example: $0 posebusters alphafold3"
+    echo "Example: $0 astex alphafold3"
     exit 1
 fi
 
