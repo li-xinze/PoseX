@@ -2,7 +2,8 @@
 # Following code adapted from (https://github.com/bytedance/Protenix)
 # --------------------------------------------------------------------
 
-
+import os
+import string
 import copy
 import gzip
 import logging
@@ -14,6 +15,7 @@ import biotite.structure as struc
 import biotite.structure.io.pdbx as pdbx
 from posex import ccd
 from pathlib import Path
+from itertools import product
 from collections import Counter
 from typing import Optional, Union
 from biotite.structure.io.pdbx import convert as pdbx_convert
@@ -542,6 +544,11 @@ class AddAtomArrayAnnot(object):
         chain_ids = np.zeros(len(atom_array), dtype="U4")
         counter = Counter()
         start_indices = struc.get_chain_starts(atom_array, add_exclusive_stop=True)
+        alphabet_list = list(string.ascii_uppercase)
+        combinations = list(product(alphabet_list, repeat=2))
+        combinations = sorted([''.join(pair) for pair in combinations])
+        alphabet_list += combinations
+        number_to_alpha_map = {n: a for n, a in enumerate(alphabet_list)}
         for i in range(len(start_indices) - 1):
             start_i = start_indices[i]
             stop_i = start_indices[i + 1]
@@ -552,7 +559,7 @@ class AddAtomArrayAnnot(object):
 
             sym_ids[start_i:stop_i] = counter[entity_id]
             counter[entity_id] += 1
-            new_chain_id = f"{atom_array.chain_id[start_i]}{sym_ids[start_i]}"
+            new_chain_id = f"{atom_array.chain_id[start_i]}{number_to_alpha_map[sym_ids[start_i]]}"
             chain_ids[start_i:stop_i] = new_chain_id
 
         atom_array.set_annotation("asym_id_int", asym_ids)
@@ -693,7 +700,8 @@ def _atom_array_to_input_json(
 
 
 def cif_to_seq(
-    mmcif_file: str,
+    pdbid: str,
+    cif_dir: str,
     assembly_id: str = "1",
     altloc: str = "first",
 ) -> dict:
@@ -701,13 +709,15 @@ def cif_to_seq(
     Convert mmcif file to sequence dict.
 
     Args:
-        mmcif_file (str): mmCIF file path.
-        assembly_id (str, optional): Assembly ID. Defaults to "1.
-        altloc (str, optional): Altloc selection. Defaults to "first".
+        pdbid (str): PDBID
+        cif_dir (str): folder containing pdb entries (cif format)
+        assembly_id (str, optional): Assembly ID. Defaults to "1
+        altloc (str, optional): Altloc selection. Defaults to "first"
 
     Returns:
         dict: sequence dict.
     """
+    mmcif_file = os.path.join(cif_dir, f"{pdbid}.cif")
     parser = MMCIFParser(mmcif_file)
     atom_array = parser.get_structure(altloc, model=1, bond_lenth_threshold=None)
 
@@ -726,12 +736,11 @@ def cif_to_seq(
     if assembly_id is not None:
         # expand created AtomArray by expand bioassembly
         atom_array = parser.expand_assembly(atom_array, assembly_id)
-
     seq_dict = _atom_array_to_input_json(
         atom_array,
         parser
     )
-    return seq_dict
+    return pdbid, seq_dict
 
 
 if __name__ == "__main__":

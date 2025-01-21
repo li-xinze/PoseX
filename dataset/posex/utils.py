@@ -168,7 +168,10 @@ def check_ETKDG(inputs, max_attempts: int = 0) -> tuple[str, bool]:
     """Check if starting conformation could be generated with ETKDGv3
     """
     ccd, input_mol = inputs
-    input_mol = Chem.RemoveHs(input_mol)
+    try:
+        input_mol = Chem.RemoveHs(input_mol)
+    except:
+        return ccd, False
     res, mol = generate_conformation(input_mol, max_attempts)
     mol = Chem.RemoveHs(mol)
     is_valid = (res != -1) & (input_mol.GetNumAtoms() == mol.GetNumAtoms())

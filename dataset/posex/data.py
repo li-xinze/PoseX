@@ -172,19 +172,28 @@ class DatasetGenerator():
     @run_in_tmp_dir
     @sync_filtered_result
     @supress_stdout
-    def filter_with_seq_length(self, max_len: int = 1500, num_cpus: int = NUM_CPUS) -> None:
+    def filter_with_seq_length(self, max_len: int = 2000, num_cpus: int = NUM_CPUS) -> None:
         """filter with protein sequence length
 
         Args:
             max_len (int): the maximum acceptable length of protein sequence
         """
         pdbid_list = list(self.pdb_ccd_dict.keys())
-        cif2seq_ = partial(cif2seq, cif_dir=self.cif_dir)
+        cif_to_seq_ = partial(cif_to_seq, cif_dir=self.cif_dir)
         with Pool(processes=num_cpus) as pool:
-            pool_iter = pool.imap_unordered(cif2seq_, pdbid_list)
-            for pdbid, sequence in my_tqdm(pool_iter, total=len(pdbid_list), desc=self._get_func_name()):
-                if len(sequence) > max_len:
-                    del self.pdb_ccd_dict[pdbid]
+            pool_iter = pool.imap_unordered(cif_to_seq_, pdbid_list)
+            for pdbid, seq_dict in my_tqdm(pool_iter, total=len(pdbid_list), desc=self._get_func_name()):
+                seq_len = 0
+                chain_count = 0
+                for item in seq_dict["sequences"]:
+                    chain_count += len(item["protein"]["id"])
+                    seq_len += len(item["protein"]["sequence"]) * len(item["protein"]["id"])
+                    if len(item["protein"]["sequence"]) < 50:
+                        del self.pdb_ccd_dict[pdbid]
+                        break
+                if seq_len > max_len or chain_count > 20:
+                    if pdbid in self.pdb_ccd_dict:
+                        del self.pdb_ccd_dict[pdbid]
 
     @sync_filtered_result
     def filter_with_unknown_ccd(self) -> None:
@@ -639,7 +648,6 @@ class DatasetGenerator():
                 ref_ligand_sdf = os.path.join(ref_item_dir, f"{ref_item}_ligand.sdf")
                 ref_ligands_sdf = os.path.join(ref_item_dir, f"{ref_item}_ligands.sdf")
                 protein_pdb = os.path.join(item_dir, f"{item}_protein.pdb")
-                protein_cif = os.path.join(item_dir, f"{item}_protein.cif")
                 pair_ref_protein_pdb = os.path.join(pair_dir, f"{pair_name}_ref_protein.pdb")
                 pair_protein_pdb = os.path.join(pair_dir, f"{pair_name}_protein.pdb")
                 pair_ligand_sdf = os.path.join(pair_dir, f"{pair_name}_ligand.sdf")
@@ -663,13 +671,14 @@ class DatasetGenerator():
                     f.write(start_mol)
 
                 # save AF3 input json file
-                task_dict = cif_to_seq(protein_cif)
+                _, task_dict = cif_to_seq(f"{item}_protein", item_dir)
                 task_dict["sequences"].append({
                     "ligand": {
-                        "id": "Z",
+                        "id": "ZZ",
                         "smiles": smiles
                     }
                 })
+                task_dict["name"] = pair_name
                 task_dict["modelSeeds"] = [42]
                 task_dict["dialect"] = "alphafold3"
                 task_dict["version"] = 1
@@ -714,13 +723,14 @@ class DatasetGenerator():
                     f.write(start_mol)
 
                 # save AF3 input json file
-                task_dict = cif_to_seq(cif_path)
+                _, task_dict = cif_to_seq(pdb, self.cif_dir)
                 task_dict["sequences"].append({
                     "ligand": {
                         "id": "Z",
                         "smiles": smiles
                     }
                 })
+                task_dict["name"] = item_name
                 task_dict["modelSeeds"] = [42]
                 task_dict["dialect"] = "alphafold3"
                 task_dict["version"] = 1
