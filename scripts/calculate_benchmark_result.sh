@@ -4,7 +4,7 @@
 if [ $# -ne 2 ]; then
     echo "Error: Missing arguments"
     echo "Usage: $0 <dataset> <model_type>"
-    echo "Example: $0 posebusters alphafold3"
+    echo "Example: $0 posex_self_dock alphafold3"
     exit 1
 fi
 
@@ -13,10 +13,10 @@ DATASET=$1
 MODEL_TYPE=$2
 
 # Set dataset folder based on DATASET
-if [ "$DATASET" = "posebusters" ]; then
-    DATASET_FOLDER="data/dataset/posebusters_benchmark_set"
-elif [ "$DATASET" = "astex" ]; then
-    DATASET_FOLDER="data/dataset/astex_diverse_set"
+if [ "$DATASET" = "posex_self_dock" ]; then
+    DATASET_FOLDER="data/dataset/posex/posex_self_docking_set"
+elif [ "$DATASET" = "posex_cross_dock" ]; then
+    DATASET_FOLDER="data/dataset/posex/posex_cross_docking_set"
 else
     echo "Error: Unknown dataset ${DATASET}"
     exit 1
