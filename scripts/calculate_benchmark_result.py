@@ -39,7 +39,7 @@ def main(args: argparse.Namespace):
     docking_data = pd.read_csv(args.input_file)
     bust_dict = defaultdict(list)
 
-    total_samples = 0
+    total_samples = len(docking_data["PDB_CCD_ID"])
     for pdb_ccd_id in docking_data["PDB_CCD_ID"]:
         mol_true = os.path.join(args.dataset_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_ligands.sdf")
         mol_cond = os.path.join(args.dataset_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_protein.pdb")
@@ -55,10 +55,10 @@ def main(args: argparse.Namespace):
         bust_dict["mol_pred"].append(mol_pred)
         bust_dict["mol_true"].append(mol_true)
         bust_dict["mol_cond"].append(mol_cond)
-        total_samples += 1
 
     bust_data = pd.DataFrame(bust_dict)
     print("Number of Benchmark Data: ", total_samples)
+    print("Number of Posebusters Data: ", len(bust_data))
     save_folder = os.path.dirname(args.input_file)
 
     # Calculate posebusters result

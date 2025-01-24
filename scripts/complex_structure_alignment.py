@@ -480,7 +480,7 @@ def main(args: argparse.Namespace):
                                                        reference_ligands_sdf=reference_ligands_sdf)
         rmsd_dict[pdb_ccd_id] = best_aligned_rmsd
 
-    print("RMSD <= 2.0:", len([k for k, v in rmsd_dict.items() if v <= 2.0]) / len(rmsd_dict))
+    print("RMSD <= 2.0:", len([k for k, v in rmsd_dict.items() if v <= 2.0]) / len(docking_data))
 
 
 if __name__ == "__main__":

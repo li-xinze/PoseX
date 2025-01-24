@@ -111,6 +111,17 @@ def extract_chai_output(args: argparse.Namespace):
         parser = MMCIFParser()
         structure = parser.get_structure(pdb_ccd_id, os.path.join(args.output_folder, f"{pdb_ccd_id}/pred.model_idx_{best_model_idx}.cif"))
         print("best_model_idx: ", best_model_idx)
+
+        for model in structure:
+            for chain in model:
+                for residue in chain:
+                    if residue.resname in [f"LIG{i}" for i in range(1, 10)]:
+                        residue.resname = "LIG"
+                    for atom in residue:
+                        if "_" in atom.name:
+                            atom.name = atom.name.split("_")[0]
+                            atom.fullname = atom.name
+
         pdb_io = PDBIO()
         pdb_io.set_structure(structure)
         pdb_io.save(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model.pdb"))
