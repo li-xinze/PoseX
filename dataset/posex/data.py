@@ -597,7 +597,7 @@ class DatasetGenerator():
                 mols = list(Chem.SDMolSupplier(raw_ligands_sdf_path))
                 cmd.load(raw_ligands_sdf_path, "ligands")
                 # Transform ligands
-                cmd.matrix_copy(cand_pdb, "ligands")
+                cmd.matrix_copy(cand_pdb, "ligands", target_state=0)
                 stored.coords = []
                 cmd.iterate_state(0, "ligands", "stored.coords.append((x, y, z))")
                 i = 0
