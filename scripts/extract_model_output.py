@@ -261,16 +261,17 @@ def extract_dynamicbind_output(args: argparse.Namespace):
         output_dir = os.path.join(args.output_folder, pdb_ccd_id)
         output_pdb_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_protein.pdb")
         output_sdf_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_ligand.sdf")
-        try:
-            matching_protein_files = glob.glob(os.path.join(args.output_folder, pdb_ccd_id, "index0_idx_0", f"rank1_receptor*"))
-            matching_ligand_files = glob.glob(os.path.join(args.output_folder, pdb_ccd_id, "index0_idx_0", f"rank1_ligand*"))
-            assert len(matching_protein_files) == 1
-            assert len(matching_ligand_files) == 1
-            shutil.copy(matching_protein_files[0], output_pdb_path)
-            shutil.copy(matching_ligand_files[0], output_sdf_path)
-        except Exception as e:
+        success = False
+        for i in range(1, 10):
+            matching_protein_files = glob.glob(os.path.join(args.output_folder, pdb_ccd_id, "index0_idx_0", f"rank{i}_receptor*"))
+            matching_ligand_files = glob.glob(os.path.join(args.output_folder, pdb_ccd_id, "index0_idx_0", f"rank{i}_ligand*"))
+            if len(matching_protein_files) == 1 and len(matching_ligand_files) == 1:
+                shutil.copy(matching_protein_files[0], output_pdb_path)
+                shutil.copy(matching_ligand_files[0], output_sdf_path)
+                success = True
+                break
+        if not success:
             error_process_ligand_ids.append(pdb_ccd_id)
-            print(f"Error processing ligand for {pdb_ccd_id}: {e}")   
 
     print(f"Number of Error Process Ligand IDs: {len(error_process_ligand_ids)}")
     print(f"Error Process Ligand IDs: {error_process_ligand_ids}")

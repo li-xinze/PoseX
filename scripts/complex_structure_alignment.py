@@ -462,7 +462,9 @@ def main(args: argparse.Namespace):
             print(f"Predicted protein or ligand does not exist for {pdb_ccd_id}")
             continue
 
-        reference_protein_pdb = os.path.join(args.dataset_folder, f"{pdb_ccd_id.upper()}", f"{pdb_ccd_id.upper()}_protein.pdb")
+        reference_protein_pdb = os.path.join(args.dataset_folder, f"{pdb_ccd_id.upper()}", f"{pdb_ccd_id.upper()}_ref_protein.pdb")
+        if not os.path.exists(reference_protein_pdb):
+            reference_protein_pdb = os.path.join(args.dataset_folder, f"{pdb_ccd_id.upper()}", f"{pdb_ccd_id.upper()}_protein.pdb")
         reference_ligands_sdf = os.path.join(args.dataset_folder, f"{pdb_ccd_id.upper()}", f"{pdb_ccd_id.upper()}_ligands.sdf")
 
         # try:

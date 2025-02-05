@@ -35,6 +35,28 @@ POSEBUSTER_TEST_COLUMNS = [
 ]
 
 
+def get_group_info(dataset: str, dataset_folder: str) -> pd.DataFrame:
+    group_dict = defaultdict(list)
+    for item_name in os.listdir(dataset_folder):
+        item_dir = os.path.join(dataset_folder, item_name)
+        if not os.path.isdir(item_dir):
+            continue
+        group_dict["PDB_CCD_ID"].append(item_name)
+        if dataset == "posex_cross_dock":
+            group_path = os.path.join(dataset_folder, item_name, "group_id.txt")
+            with open(group_path, "r") as f:
+                lines = f.readlines()
+                lines = [line.strip() for line in lines]
+            group_dict["PDB_GROUP"].append(lines[0])
+            group_dict["GROUP"].append(lines[1])
+        elif dataset == "posex_self_dock":
+            group_dict["PDB_GROUP"].append(item_name)
+            group_dict["GROUP"].append(item_name)
+        else:
+            raise RuntimeError()
+    df_group = pd.DataFrame(group_dict)
+    return df_group
+
 def main(args: argparse.Namespace):
     docking_data = pd.read_csv(args.input_file)
     bust_dict = defaultdict(list)
@@ -42,7 +64,9 @@ def main(args: argparse.Namespace):
     total_samples = len(docking_data["PDB_CCD_ID"])
     for pdb_ccd_id in docking_data["PDB_CCD_ID"]:
         mol_true = os.path.join(args.dataset_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_ligands.sdf")
-        mol_cond = os.path.join(args.dataset_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_protein.pdb")
+        mol_cond = os.path.join(args.dataset_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_ref_protein.pdb")
+        if not os.path.exists(mol_cond):
+            mol_cond = os.path.join(args.dataset_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_protein.pdb")
 
         if args.model_type == "alphafold3":
             pdb_ccd_id = pdb_ccd_id.lower()
@@ -66,17 +90,32 @@ def main(args: argparse.Namespace):
     buster.config["loading"]["mol_true"]["load_all"] = True
     bust_results = buster.bust_table(bust_data, full_report=True)
     bust_results["PDB_CCD_ID"] = bust_dict["PDB_CCD_ID"]
+    if args.dataset in ["posex_self_dock", "posex_cross_dock"]:
+        df_group = get_group_info(args.dataset, args.dataset_folder)
+        df_group_sim = pd.read_csv(os.path.join(args.dataset_folder, "qtm.csv"))
+        bust_results = pd.merge(bust_results, df_group, on="PDB_CCD_ID")
+        bust_results = pd.merge(bust_results, df_group_sim, on="GROUP")
     bust_results.to_csv(os.path.join(save_folder, f"{args.dataset}_benchmark_result_{args.model_type}.csv"), index=False)
 
-    # Calculate accuracy    
-    accuracy = len(bust_results[bust_results["rmsd_≤_2å"] == True]) / total_samples
-    print(f"RMSD ≤ 2 Å: {accuracy * 100:.2f}%")
+    if args.dataset in ["posex_self_dock", "posex_cross_dock"]:
+        test_data = bust_results[POSEBUSTER_TEST_COLUMNS].copy()
+        bust_results.loc[:, "pb_valid"] = test_data.iloc[:, 1:].all(axis=1)
+        bust_results = bust_results.groupby("PDB_GROUP").agg({"rmsd": "mean", "pb_valid": "mean", "GROUP": "first"})
+        bust_results = bust_results.groupby("GROUP").agg({"rmsd": "mean", "pb_valid": "mean"})
+        accuracy = len(bust_results[bust_results["rmsd"] <= 2.0]) / len(bust_results)
+        print(f"RMSD ≤ 2 Å: {accuracy * 100:.2f}%")
+        valid_data = bust_results[(bust_results["rmsd"] <= 2) & (bust_results["pb_valid"] >= 0.5)]
+        print(f"RMSD ≤ 2 Å and PB Valid: {len(valid_data) / len(bust_results) * 100:.2f}%")
+    else:
+        # Calculate accuracy    
+        accuracy = len(bust_results[bust_results["rmsd_≤_2å"] == True]) / total_samples
+        print(f"RMSD ≤ 2 Å: {accuracy * 100:.2f}%")
 
-    # Calculate posebusters test result
-    test_data = bust_results[POSEBUSTER_TEST_COLUMNS].copy()
-    test_data.loc[:, "pb_valid"] = test_data.iloc[:, 1:].all(axis=1)
-    valid_data = test_data[test_data["rmsd_≤_2å"] & test_data["pb_valid"]]
-    print(f"RMSD ≤ 2 Å and PB Valid: {len(valid_data) / total_samples * 100:.2f}%")
+        # Calculate posebusters test result
+        test_data = bust_results[POSEBUSTER_TEST_COLUMNS].copy()
+        test_data.loc[:, "pb_valid"] = test_data.iloc[:, 1:].all(axis=1)
+        valid_data = test_data[test_data["rmsd_≤_2å"] & test_data["pb_valid"]]
+        print(f"RMSD ≤ 2 Å and PB Valid: {len(valid_data) / total_samples * 100:.2f}%")
 
 
 if __name__ == "__main__":

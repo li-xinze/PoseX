@@ -125,8 +125,9 @@ class TankBindRunner():
             cutoff = 10
             itemname = row["PDB_CCD_ID"]
             toFile = f"{toFolder}/{itemname}_protein.pdb"
-            x = (row["PROTEIN_PDB_PATH"], row["LIGAND_SDF_PATH"], cutoff, toFile)
-            select_chain_within_cutoff_to_ligand_v2(x)
+            shutil.copy(row["PROTEIN_PDB_PATH"], toFile)
+            # x = (row["PROTEIN_PDB_PATH"], row["LIGAND_SDF_PATH"], cutoff, toFile)
+            # select_chain_within_cutoff_to_ligand_v2(x)
         pockets_dict = self._predict_pockets()
         protein_dict = self._predict_protein_feature()
         compound_dict = self._predict_ligand_feature()
