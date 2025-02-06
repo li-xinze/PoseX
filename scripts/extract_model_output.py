@@ -4,12 +4,12 @@ import glob
 import shutil
 import numpy as np
 import pandas as pd
-import prody
+# import prody
 from Bio.PDB import MMCIFParser, PDBIO
 from biopandas.pdb import PandasPdb
+
 from rdkit import Chem
 from rdkit.Chem import AllChem
-
 
 
 def convert_ligand_pdb_to_sdf(model_output_folder: str, pdb_ccd_id: str, ligand_smiles: str) -> bool:
@@ -30,7 +30,7 @@ def convert_ligand_pdb_to_sdf(model_output_folder: str, pdb_ccd_id: str, ligand_
     except Exception as e:
         mol = Chem.MolFromPDBFile(os.path.join(model_output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.pdb"), sanitize=False)
         print(f"Error assigning bond orders for ligand {pdb_ccd_id}: {e}")
-    
+
     try:
         test_mol = Chem.Mol(mol)
         Chem.SanitizeMol(test_mol)
@@ -125,7 +125,7 @@ def extract_chai_output(args: argparse.Namespace):
         pdb_io = PDBIO()
         pdb_io.set_structure(structure)
         pdb_io.save(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model.pdb"))
-        
+
         # Parse the PDBFile
         pdb = prody.parsePDB(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model.pdb"))
         protein = pdb.select("protein")
@@ -160,7 +160,8 @@ def extract_boltz_output(args: argparse.Namespace):
             print(f"Directory {pdb_ccd_id} does not exist")
             continue
 
-        cif_path = os.path.join(args.output_folder, f"{pdb_ccd_id}/boltz_results_{pdb_ccd_id}/predictions/{pdb_ccd_id}/{pdb_ccd_id}_model_0.cif")
+        cif_path = os.path.join(args.output_folder,
+                                f"{pdb_ccd_id}/boltz_results_{pdb_ccd_id}/predictions/{pdb_ccd_id}/{pdb_ccd_id}_model_0.cif")
         if not os.path.exists(cif_path):
             print(f"CIF file {cif_path} does not exist")
             continue
@@ -245,7 +246,7 @@ def extract_tankbind_output(args: argparse.Namespace):
             shutil.copy(f"{args.output_folder}/{pdb_ccd_id}_tankbind_chosen.sdf", output_sdf_path)
         except Exception as e:
             error_process_ligand_ids.append(pdb_ccd_id)
-            print(f"Error processing ligand for {pdb_ccd_id}: {e}")   
+            print(f"Error processing ligand for {pdb_ccd_id}: {e}")
 
     print(f"Number of Error Process Ligand IDs: {len(error_process_ligand_ids)}")
     print(f"Error Process Ligand IDs: {error_process_ligand_ids}")
@@ -262,15 +263,17 @@ def extract_dynamicbind_output(args: argparse.Namespace):
         output_pdb_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_protein.pdb")
         output_sdf_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_ligand.sdf")
         try:
-            matching_protein_files = glob.glob(os.path.join(args.output_folder, pdb_ccd_id, "index0_idx_0", f"rank1_receptor*"))
-            matching_ligand_files = glob.glob(os.path.join(args.output_folder, pdb_ccd_id, "index0_idx_0", f"rank1_ligand*"))
+            matching_protein_files = glob.glob(
+                os.path.join(args.output_folder, pdb_ccd_id, "index0_idx_0", f"rank1_receptor*"))
+            matching_ligand_files = glob.glob(
+                os.path.join(args.output_folder, pdb_ccd_id, "index0_idx_0", f"rank1_ligand*"))
             assert len(matching_protein_files) == 1
             assert len(matching_ligand_files) == 1
             shutil.copy(matching_protein_files[0], output_pdb_path)
             shutil.copy(matching_ligand_files[0], output_sdf_path)
         except Exception as e:
             error_process_ligand_ids.append(pdb_ccd_id)
-            print(f"Error processing ligand for {pdb_ccd_id}: {e}")   
+            print(f"Error processing ligand for {pdb_ccd_id}: {e}")
 
     print(f"Number of Error Process Ligand IDs: {len(error_process_ligand_ids)}")
     print(f"Error Process Ligand IDs: {error_process_ligand_ids}")
@@ -292,7 +295,7 @@ def extract_diffdock_output(args: argparse.Namespace):
             shutil.copy(f"{args.output_folder}/{pdb_ccd_id}/rank1.sdf", output_sdf_path)
         except Exception as e:
             error_process_ligand_ids.append(pdb_ccd_id)
-            print(f"Error processing ligand for {pdb_ccd_id}: {e}")   
+            print(f"Error processing ligand for {pdb_ccd_id}: {e}")
 
     print(f"Number of Error Process Ligand IDs: {len(error_process_ligand_ids)}")
     print(f"Error Process Ligand IDs: {error_process_ligand_ids}")
@@ -316,7 +319,159 @@ def extract_fabind_output(args: argparse.Namespace):
             shutil.copy(matching_files[0], output_sdf_path)
         except Exception as e:
             error_process_ligand_ids.append(pdb_ccd_id)
-            print(f"Error processing ligand for {pdb_ccd_id}: {e}")   
+            print(f"Error processing ligand for {pdb_ccd_id}: {e}")
+
+    print(f"Number of Error Process Ligand IDs: {len(error_process_ligand_ids)}")
+    print(f"Error Process Ligand IDs: {error_process_ligand_ids}")
+
+
+def extract_deepfold_output(args: argparse.Namespace):
+    docking_data = pd.read_csv(args.input_file)
+    print("Number of Posebusters Data: ", len(docking_data))
+    error_process_ligand_ids = []
+    temp_output_dir = os.path.join(os.path.dirname(args.output_folder), "input")
+    for _, row in docking_data.iterrows():
+        print(f"Processing {row['PDB_CCD_ID']}")
+        pdb_ccd_id = row["PDB_CCD_ID"]
+        output_dir = os.path.join(args.output_folder, pdb_ccd_id)
+        os.makedirs(output_dir, exist_ok=True)
+        output_pdb_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_protein.pdb")
+        output_sdf_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_ligand.sdf")
+        temp_sdf_path = os.path.join(temp_output_dir, pdb_ccd_id, f"{pdb_ccd_id}_optimal.sdf")
+        if os.path.exists(temp_sdf_path) and os.path.getsize(temp_sdf_path):
+            shutil.copy(row["PROTEIN_PDB_PATH"], output_pdb_path)
+            shutil.copy(f"{temp_sdf_path}", output_sdf_path)
+        else:
+            error_process_ligand_ids.append(pdb_ccd_id)
+            print(f"Error processing ligand for {pdb_ccd_id}")
+
+    print(f"Number of Error Process Ligand IDs: {len(error_process_ligand_ids)}")
+    print(f"Error Process Ligand IDs: {error_process_ligand_ids}")
+
+
+def extract_neuralplexer_output(args: argparse.Namespace):
+    docking_data = pd.read_csv(args.input_file)
+    print("Number of Posebusters Data: ", len(docking_data))
+    error_process_ligand_ids = []
+    for _, row in docking_data.iterrows():
+        print(f"Processing {row['PDB_CCD_ID']}")
+        pdb_ccd_id = row["PDB_CCD_ID"]
+        output_dir = os.path.join(args.output_folder, pdb_ccd_id)
+        os.makedirs(output_dir, exist_ok=True)
+        output_pdb_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_protein.pdb")
+        origin_sdf_path = os.path.join(output_dir, f"lig_0.sdf")
+        output_sdf_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_ligand.sdf")
+        try:
+            shutil.copy(row["PROTEIN_PDB_PATH"], output_pdb_path)
+            shutil.copy(origin_sdf_path, output_sdf_path)
+        except Exception as e:
+            error_process_ligand_ids.append(pdb_ccd_id)
+            print(f"Error processing ligand for {pdb_ccd_id}: {e}")
+
+    print(f"Number of Error Process Ligand IDs: {len(error_process_ligand_ids)}")
+    print(f"Error Process Ligand IDs: {error_process_ligand_ids}")
+
+
+def extract_gnina_output(args: argparse.Namespace):
+    docking_data = pd.read_csv(args.input_file)
+    print("Number of Posebusters Data: ", len(docking_data))
+    error_process_ligand_ids = []
+    for _, row in docking_data.iterrows():
+        print(f"Processing {row['PDB_CCD_ID']}")
+        pdb_ccd_id = row["PDB_CCD_ID"]
+        output_dir = os.path.join(args.output_folder, pdb_ccd_id)
+        os.makedirs(output_dir, exist_ok=True)
+
+        output_pdb_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_protein.pdb")
+        input_sdf_path = os.path.join(output_dir, f"{pdb_ccd_id}_ligand.sdf")
+        output_sdf_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_ligand.sdf")
+        try:
+            # suppl = Chem.SDMolSupplier(input_sdf_path)
+            # mol = suppl[0]
+            # writer = Chem.SDWriter(output_sdf_path)
+            # writer.write(mol, confId=0)
+            shutil.copy(input_sdf_path, output_sdf_path)
+            shutil.copy(row["PROTEIN_PDB_PATH"], output_pdb_path)
+        except Exception as e:
+            error_process_ligand_ids.append(pdb_ccd_id)
+            print(f"Error processing ligand for {pdb_ccd_id}: {e}")
+
+    print(f"Number of Error Process Ligand IDs: {len(error_process_ligand_ids)}")
+    print(f"Error Process Ligand IDs: {error_process_ligand_ids}")
+
+
+def extract_unimol_output(args: argparse.Namespace):
+    docking_data = pd.read_csv(args.input_file)
+    print("Number of Posebusters Data: ", len(docking_data))
+    error_process_ligand_ids = []
+    for _, row in docking_data.iterrows():
+        print(f"Processing {row['PDB_CCD_ID']}")
+        pdb_ccd_id = row["PDB_CCD_ID"]
+        output_dir = os.path.join(args.output_folder, pdb_ccd_id)
+        os.makedirs(output_dir, exist_ok=True)
+
+        output_pdb_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_protein.pdb")
+        input_sdf_path = os.path.join(output_dir, "ligand_predict.sdf")
+        output_sdf_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_ligand.sdf")
+        try:
+            shutil.copy(row["PROTEIN_PDB_PATH"], output_pdb_path)
+            shutil.copy(input_sdf_path, output_sdf_path)
+        except Exception as e:
+            error_process_ligand_ids.append(pdb_ccd_id)
+            print(f"Error processing ligand for {pdb_ccd_id}: {e}")
+
+    print(f"Number of Error Process Ligand IDs: {len(error_process_ligand_ids)}")
+    print(f"Error Process Ligand IDs: {error_process_ligand_ids}")
+
+
+def extract_interformer_output(args: argparse.Namespace):
+    docking_data = pd.read_csv(args.input_file)
+    print("Number of Posebusters Data: ", len(docking_data))
+    error_process_ligand_ids = []
+    temp_output_dir = os.path.join(os.path.dirname(args.output_folder), "input")
+    for _, row in docking_data.iterrows():
+        print(f"Processing {row['PDB_CCD_ID']}")
+        pdb_ccd_id = row["PDB_CCD_ID"]
+        pdb = row["PDB_ID"]
+        output_dir = os.path.join(args.output_folder, pdb_ccd_id)
+        os.makedirs(output_dir, exist_ok=True)
+
+        output_pdb_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_protein.pdb")
+        input_sdf_path = os.path.join(temp_output_dir, pdb_ccd_id, f"infer/ligand_reconstructing/{pdb}_docked.sdf")
+        output_sdf_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_ligand.sdf")
+        try:
+            suppl = Chem.SDMolSupplier(input_sdf_path)
+            mol = suppl[0]
+            writer = Chem.SDWriter(output_sdf_path)
+            writer.write(mol, confId=0)
+            shutil.copy(row["PROTEIN_PDB_PATH"], output_pdb_path)
+        except Exception as e:
+            error_process_ligand_ids.append(pdb_ccd_id)
+            print(f"Error processing ligand for {pdb_ccd_id}: {e}")
+
+    print(f"Number of Error Process Ligand IDs: {len(error_process_ligand_ids)}")
+    print(f"Error Process Ligand IDs: {error_process_ligand_ids}")
+
+
+def extract_equibind_output(args: argparse.Namespace):
+    docking_data = pd.read_csv(args.input_file)
+    print("Number of Posebusters Data: ", len(docking_data))
+    error_process_ligand_ids = []
+    for _, row in docking_data.iterrows():
+        print(f"Processing {row['PDB_CCD_ID']}")
+        pdb_ccd_id = row["PDB_CCD_ID"]
+        output_dir = os.path.join(args.output_folder, pdb_ccd_id)
+        os.makedirs(output_dir, exist_ok=True)
+
+        output_pdb_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_protein.pdb")
+        input_sdf_path = os.path.join(output_dir, "lig_equibind_corrected.sdf")
+        output_sdf_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_ligand.sdf")
+        try:
+            shutil.copy(row["PROTEIN_PDB_PATH"], output_pdb_path)
+            shutil.copy(input_sdf_path, output_sdf_path)
+        except Exception as e:
+            error_process_ligand_ids.append(pdb_ccd_id)
+            print(f"Error processing ligand for {pdb_ccd_id}: {e}")
 
     print(f"Number of Error Process Ligand IDs: {len(error_process_ligand_ids)}")
     print(f"Error Process Ligand IDs: {error_process_ligand_ids}")
@@ -339,6 +494,18 @@ def main(args: argparse.Namespace):
         extract_fabind_output(args)
     elif args.model_type == "dynamicbind":
         extract_dynamicbind_output(args)
+    elif args.model_type == "deepdock":
+        extract_deepfold_output(args)
+    elif args.model_type == "neuralplexer":
+        extract_neuralplexer_output(args)
+    elif args.model_type == "gnina":
+        extract_gnina_output(args)
+    elif args.model_type == "unimol":
+        extract_unimol_output(args)
+    elif args.model_type == "interformer":
+        extract_interformer_output(args)
+    elif args.model_type == "equibind":
+        extract_equibind_output(args)
     else:
         raise ValueError(f"Unsupported model type: {args.model_type}")
 
@@ -349,5 +516,5 @@ if __name__ == "__main__":
     parser.add_argument("--output_folder", type=str, required=True, help="Path to the model output folder")
     parser.add_argument("--model_type", type=str, required=True, help="Model type")
     args = parser.parse_args()
-    
+
     main(args)

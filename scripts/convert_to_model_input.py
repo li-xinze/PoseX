@@ -1,4 +1,5 @@
 import argparse
+import csv
 import json
 import os
 import shutil
@@ -7,22 +8,24 @@ import string
 import pandas as pd
 import yaml
 from tqdm.auto import tqdm
+from rdkit import Chem
+import numpy as np
 
 
 def generate_alphafold3_input(args: argparse.Namespace):
     """Generate AlphaFold3 input for a given docking data."""
 
-    docking_data = pd.read_csv(args.input_file)    
+    docking_data = pd.read_csv(args.input_file)
     for data_idx, row in tqdm(docking_data.iterrows(), total=len(docking_data)):
         task_name = row["PDB_CCD_ID"]
         task_dict = {"name": task_name, "sequences": []}
-        
+
         protein_sequences = row["PROTEIN_SEQUENCE"].split("|")
         # Skip if there are more than 20 chains
         if len(protein_sequences) > 20:
             print(f"Skipping {row['PDB_CCD_ID']} because it has more than 20 chains")
             continue
-        
+
         # Add the protein sequences
         for sequence_idx, protein_sequence in enumerate(protein_sequences):
             sequence_dict = {
@@ -78,7 +81,7 @@ def generate_chai_input(args: argparse.Namespace):
 def generate_boltz_input(args: argparse.Namespace):
     """Generate Boltz input for a given docking data."""
 
-    docking_data = pd.read_csv(args.input_file)    
+    docking_data = pd.read_csv(args.input_file)
     for _, row in tqdm(docking_data.iterrows(), total=len(docking_data)):
         task_dict = {"version": 1, "sequences": []}
 
@@ -87,7 +90,7 @@ def generate_boltz_input(args: argparse.Namespace):
         if len(protein_sequences) > 20:
             print(f"Skipping {row['PDB_CCD_ID']} because it has more than 20 chains")
             continue
-        
+
         # Add the protein sequences
         for sequence_idx, protein_sequence in enumerate(protein_sequences):
             task_dict["sequences"].append({
@@ -96,7 +99,7 @@ def generate_boltz_input(args: argparse.Namespace):
                     "sequence": protein_sequence
                 }
             })
-        
+
         # Add the ligand
         task_dict["sequences"].append({
             "ligand": {
@@ -149,7 +152,7 @@ def generate_rfaa_input(args: argparse.Namespace):
 def generate_dynamicbind_input(args: argparse.Namespace):
     """Generate DynaimcBind input for a given docking data."""
 
-    docking_data = pd.read_csv(args.input_file)    
+    docking_data = pd.read_csv(args.input_file)
     for _, row in tqdm(docking_data.iterrows(), total=len(docking_data)):
         ligand_path = os.path.join(args.output_folder, f"{row['PDB_CCD_ID']}.csv")
         protein_path = os.path.join(args.output_folder, f"{row['PDB_CCD_ID']}.pdb")
@@ -162,7 +165,7 @@ def generate_dynamicbind_input(args: argparse.Namespace):
 def generate_tankbind_input(args: argparse.Namespace):
     """Generate TankBind input for a given docking data."""
 
-    docking_data = pd.read_csv(args.input_file)    
+    docking_data = pd.read_csv(args.input_file)
     input_data = docking_data[["PDB_CCD_ID", "PROTEIN_PDB_PATH", "LIGAND_SDF_PATH"]]
     input_data.to_csv(f"{args.output_folder}/data.csv", index=False)
 
@@ -170,7 +173,7 @@ def generate_tankbind_input(args: argparse.Namespace):
 def generate_diffdock_input(args: argparse.Namespace):
     """Generate DiffD input for a given docking data."""
 
-    docking_data = pd.read_csv(args.input_file)    
+    docking_data = pd.read_csv(args.input_file)
     input_data = docking_data[["PDB_CCD_ID", "PROTEIN_PDB_PATH", "PROTEIN_SEQUENCE", "LIGAND_SMILES"]].copy()
     input_data.columns = ["complex_name", "protein_path", "protein_sequence", "ligand_description"]
     input_data["protein_path"] = input_data["protein_path"].apply(os.path.abspath)
@@ -180,7 +183,7 @@ def generate_diffdock_input(args: argparse.Namespace):
 def generate_fabind_input(args: argparse.Namespace):
     """Generate FABind input for a given docking data."""
 
-    docking_data = pd.read_csv(args.input_file)    
+    docking_data = pd.read_csv(args.input_file)
     input_data = docking_data[["LIGAND_SMILES", "PDB_CCD_ID"]]
     input_data.to_csv(f"{args.output_folder}/ligand.csv", index=False)
     protein_dir = os.path.join(args.output_folder, "protein")
@@ -188,6 +191,184 @@ def generate_fabind_input(args: argparse.Namespace):
     for _, row in tqdm(docking_data.iterrows(), total=len(docking_data)):
         protein_path = os.path.join(protein_dir, f"{row['PDB_CCD_ID']}.pdb")
         shutil.copy(row['PROTEIN_PDB_PATH'], protein_path)
+
+
+def generate_deepdock_input(args: argparse.Namespace):
+    """Generate DeepDock input for a given docking data."""
+
+    docking_data = pd.read_csv(args.input_file)
+    for data_idx, row in tqdm(docking_data.iterrows(), total=len(docking_data)):
+        task_name = row["PDB_CCD_ID"]
+        protein_path = row["PROTEIN_PDB_PATH"]
+        ligand_path = row["LIGAND_SDF_PATH"]
+        task_dir = os.path.join(args.output_folder, task_name)
+        os.makedirs(task_dir, exist_ok=True)
+        shutil.copy(protein_path, task_dir)
+        shutil.copy(ligand_path, task_dir)
+
+
+def generate_neuralplexer_input(args: argparse.Namespace):
+    """Generate NeuralPlexer input for a given docking data."""
+
+    def remove_insertion_code(protein_path, task_dir):
+        with open(protein_path) as f:
+            lines = f.readlines()
+        content = ""
+        for line in lines:
+            if not line.startswith("ATOM") or not line[26].isalpha():
+                content += line
+        output_path = os.path.join(task_dir, os.path.basename(protein_path))
+        with open(output_path, "w") as fw:
+            fw.write(content)
+
+    docking_data = pd.read_csv(args.input_file)
+    for data_idx, row in tqdm(docking_data.iterrows(), total=len(docking_data)):
+        task_name = row["PDB_CCD_ID"]
+        protein_path = row["PROTEIN_PDB_PATH"]
+        ligand_path = row["LIGAND_SDF_PATH"]
+        task_dir = os.path.join(args.output_folder, task_name)
+        os.makedirs(task_dir, exist_ok=True)
+        # shutil.copy(protein_path, task_dir)
+        remove_insertion_code(protein_path, task_dir)
+        shutil.copy(ligand_path, task_dir)
+
+
+def generate_gnina_input(args: argparse.Namespace):
+    """Generate Gnina input for a given docking data."""
+
+    docking_data = pd.read_csv(args.input_file)
+    for data_idx, row in tqdm(docking_data.iterrows(), total=len(docking_data)):
+        task_name = row["PDB_CCD_ID"]
+        protein_path = row["PROTEIN_PDB_PATH"]
+        ligand_path = row["LIGAND_SDF_PATH"]
+        task_dir = os.path.join(args.output_folder, task_name)
+        os.makedirs(task_dir, exist_ok=True)
+        shutil.copy(protein_path, task_dir)
+        shutil.copy(ligand_path, task_dir)
+
+
+def generate_unimol_input(args: argparse.Namespace):
+    """Generate Unimol_docking v2 input for a given docking data."""
+
+    def calculated_docking_grid_sdf(ligand_path, json_path, pdb_ccd_id, add_size=10):
+        os.makedirs(json_path, exist_ok=True)
+        output_grid = os.path.join(json_path, pdb_ccd_id + '.json')
+        add_size = add_size
+        mol = Chem.MolFromMolFile(ligand_path, sanitize=False)
+        coords = mol.GetConformer(0).GetPositions().astype(np.float32)
+        min_xyz = [min(coord[i] for coord in coords) for i in range(3)]
+        max_xyz = [max(coord[i] for coord in coords) for i in range(3)]
+        center = np.mean(coords, axis=0)
+        size = [abs(max_xyz[i] - min_xyz[i]) for i in range(3)]
+        center_x, center_y, center_z = center
+        size_x, size_y, size_z = size
+        size_x = size_x + add_size
+        size_y = size_y + add_size
+        size_z = size_z + add_size
+        grid_info = {
+            "center_x": float(center_x),
+            "center_y": float(center_y),
+            "center_z": float(center_z),
+            "size_x": float(size_x),
+            "size_y": float(size_y),
+            "size_z": float(size_z)
+        }
+        with open(output_grid, 'w') as f:
+            json.dump(grid_info, f, indent=4)
+
+    docking_data = pd.read_csv(args.input_file)
+    for data_idx, row in tqdm(docking_data.iterrows(), total=len(docking_data)):
+        task_name = row["PDB_CCD_ID"]
+        protein_path = row["PROTEIN_PDB_PATH"]
+        ligand_path = row["LIGAND_SDF_PATH"]
+        task_dir = os.path.join(args.output_folder, task_name)
+        calculated_docking_grid_sdf(ligand_path, task_dir, task_name)
+        shutil.copy(protein_path, task_dir)
+        shutil.copy(ligand_path, task_dir)
+
+
+def generate_interformer_input(args: argparse.Namespace):
+    """Generate Interformer input for a given docking data."""
+
+    docking_data = pd.read_csv(args.input_file)
+    for data_idx, row in tqdm(docking_data.iterrows(), total=len(docking_data)):
+        task_name = row["PDB_CCD_ID"]
+        protein_path = row["PROTEIN_PDB_PATH"]
+        ligand_path = row["LIGAND_SDF_PATH"]
+        task_dir = os.path.join(args.output_folder, task_name, "raw")
+        os.makedirs(task_dir, exist_ok=True)
+        shutil.copy(protein_path, task_dir)
+        shutil.copy(ligand_path, task_dir)
+
+
+def generate_equibind_input(args: argparse.Namespace):
+    """Generate EquiBind input for a given docking data."""
+
+    docking_data = pd.read_csv(args.input_file)
+    for data_idx, row in tqdm(docking_data.iterrows(), total=len(docking_data)):
+        task_name = row["PDB_CCD_ID"]
+        protein_path = row["PROTEIN_PDB_PATH"]
+        ligand_path = row["LIGAND_SDF_PATH"]
+        task_dir = os.path.join(args.output_folder, task_name)
+        os.makedirs(task_dir, exist_ok=True)
+        shutil.copy(protein_path, task_dir)
+        shutil.copy(ligand_path, task_dir)
+
+
+def generate_protenix_input(args: argparse.Namespace):
+    """Generate Protenix input for a given docking data."""
+
+    # TODO: remove
+    # uniprot_path = os.path.join(args.output_folder, "database/uniprot_all_2021_04.fa")
+    # mgy_path = os.path.join(args.output_folder, "database/mgy_clusters_2022_05.fa")
+    uniprot_path = "/home/hanj/af_running/database/uniprot_all_2021_04.fa"
+    mgy_path = "/home/hanj/af_running/database/mgy_clusters_2022_05.fa"
+    docking_data = pd.read_csv(args.input_file)
+    for data_idx, row in tqdm(docking_data.iterrows(), total=len(docking_data)):
+        task_name = row["PDB_CCD_ID"]
+        task_dict = {"name": task_name, "sequences": []}
+
+        protein_sequences = row["PROTEIN_SEQUENCE"].split("|")
+        # Skip if there are more than 20 chains
+        if len(protein_sequences) > 20:
+            print(f"Skipping {row['PDB_CCD_ID']} because it has more than 20 chains")
+            continue
+
+        # Add the protein sequences
+        for sequence_idx, protein_sequence in enumerate(protein_sequences):
+            sequence_dict = {
+                "proteinChain": {
+                    "sequence": protein_sequence,
+                    "count": 1,
+                },
+            }
+            task_dict["sequences"].append(sequence_dict)
+
+        # Add the ligand
+        task_dict["sequences"].append({
+            "ligand": {
+                "ligand": row["LIGAND_SMILES"],
+                "count": 1
+            }
+        })
+
+        with open(os.path.join(args.output_folder, f"{task_name}.json"), "w") as f:
+            json.dump([task_dict], f, indent=2)
+
+
+def generate_surfdock_input(args: argparse.Namespace):
+    """Generate SurfDock input for a given docking data."""
+
+    docking_data = pd.read_csv(args.input_file)
+    for data_idx, row in tqdm(docking_data.iterrows(), total=len(docking_data)):
+        task_name = row["PDB_CCD_ID"]
+        protein_path = row["PROTEIN_PDB_PATH"]
+        ligand_path = row["LIGAND_SDF_PATH"]
+        task_dir = os.path.join(args.output_folder, task_name)
+        os.makedirs(task_dir, exist_ok=True)
+        protein_output_path = os.path.join(task_dir, f"{task_name}_protein_processed.pdb")
+        shutil.copy(protein_path, protein_output_path)
+        shutil.copy(ligand_path, task_dir)
 
 
 def main(args: argparse.Namespace):
@@ -210,6 +391,22 @@ def main(args: argparse.Namespace):
         generate_diffdock_input(args)
     elif args.model_type == "fabind":
         generate_fabind_input(args)
+    elif args.model_type == "deepdock":
+        generate_deepdock_input(args)
+    elif args.model_type == "neuralplexer":
+        generate_neuralplexer_input(args)
+    elif args.model_type == "gnina":
+        generate_gnina_input(args)
+    elif args.model_type == "unimol":
+        generate_unimol_input(args)
+    elif args.model_type == "interformer":
+        generate_interformer_input(args)
+    elif args.model_type == "equibind":
+        generate_equibind_input(args)
+    elif args.model_type == "protenix":
+        generate_protenix_input(args)
+    elif args.model_type == "surfdock":
+        generate_surfdock_input(args)
     else:
         raise ValueError(f"Unsupported model type: {args.model_type}")
 
