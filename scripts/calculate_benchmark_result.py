@@ -102,10 +102,12 @@ def main(args: argparse.Namespace):
         bust_results.loc[:, "pb_valid"] = test_data.iloc[:, 1:].all(axis=1)
         bust_results = bust_results.groupby("PDB_GROUP").agg({"rmsd": "mean", "pb_valid": "mean", "GROUP": "first"})
         bust_results = bust_results.groupby("GROUP").agg({"rmsd": "mean", "pb_valid": "mean"})
-        accuracy = len(bust_results[bust_results["rmsd"] <= 2.0]) / len(bust_results)
+        if args.dataset == "posex_cross_dock":
+            total_samples = len(bust_results)
+        accuracy = len(bust_results[bust_results["rmsd"] <= 2.0]) / total_samples
         print(f"RMSD ≤ 2 Å: {accuracy * 100:.2f}%")
         valid_data = bust_results[(bust_results["rmsd"] <= 2) & (bust_results["pb_valid"] >= 0.5)]
-        print(f"RMSD ≤ 2 Å and PB Valid: {len(valid_data) / len(bust_results) * 100:.2f}%")
+        print(f"RMSD ≤ 2 Å and PB Valid: {len(valid_data) / total_samples * 100:.2f}%")
     else:
         # Calculate accuracy    
         accuracy = len(bust_results[bust_results["rmsd_≤_2å"] == True]) / total_samples
