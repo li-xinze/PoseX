@@ -4,6 +4,10 @@ channels:
   - nvidia
   - conda-forge
 dependencies:
+  - openmmforcefields
+  - openmm
+  - openff-toolkit
+  - ambertools
   - _libgcc_mutex=0.1=conda_forge
   - _openmp_mutex=4.5=2_kmp_llvm
   - _py-xgboost-mutex=2.0=gpu_0
