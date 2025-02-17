@@ -64,17 +64,13 @@ def main(args: argparse.Namespace):
     total_samples = len(docking_data["PDB_CCD_ID"])
     for pdb_ccd_id in docking_data["PDB_CCD_ID"]:
         mol_true = os.path.join(args.dataset_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_ligands.sdf")
-        mol_cond = os.path.join(args.dataset_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_ref_protein.pdb")
-        if not os.path.exists(mol_cond):
-            mol_cond = os.path.join(args.dataset_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_protein.pdb")
-
         if args.model_type == "alphafold3":
             pdb_ccd_id = pdb_ccd_id.lower()
+        mol_cond = os.path.join(args.model_output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_protein_aligned.pdb")
         mol_pred = os.path.join(args.model_output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand_aligned.sdf")
         if not os.path.exists(mol_pred):
             print(f"File {mol_pred} does not exist")
             continue
-
         bust_dict["PDB_CCD_ID"].append(pdb_ccd_id.upper())
         bust_dict["mol_pred"].append(mol_pred)
         bust_dict["mol_true"].append(mol_true)
@@ -95,15 +91,14 @@ def main(args: argparse.Namespace):
         df_group_sim = pd.read_csv(os.path.join(args.dataset_folder, "qtm.csv"))
         bust_results = pd.merge(bust_results, df_group, on="PDB_CCD_ID")
         bust_results = pd.merge(bust_results, df_group_sim, on="GROUP")
+        if args.dataset == "posex_cross_dock":
+            total_samples = df_group.GROUP.unique().shape[0]
     bust_results.to_csv(os.path.join(save_folder, f"{args.dataset}_benchmark_result_{args.model_type}.csv"), index=False)
-
     if args.dataset in ["posex_self_dock", "posex_cross_dock"]:
         test_data = bust_results[POSEBUSTER_TEST_COLUMNS].copy()
         bust_results.loc[:, "pb_valid"] = test_data.iloc[:, 1:].all(axis=1)
         bust_results = bust_results.groupby("PDB_GROUP").agg({"rmsd": "mean", "pb_valid": "mean", "GROUP": "first"})
         bust_results = bust_results.groupby("GROUP").agg({"rmsd": "mean", "pb_valid": "mean"})
-        if args.dataset == "posex_cross_dock":
-            total_samples = len(bust_results)
         accuracy = len(bust_results[bust_results["rmsd"] <= 2.0]) / total_samples
         print(f"RMSD ≤ 2 Å: {accuracy * 100:.2f}%")
         valid_data = bust_results[(bust_results["rmsd"] <= 2) & (bust_results["pb_valid"] >= 0.5)]
