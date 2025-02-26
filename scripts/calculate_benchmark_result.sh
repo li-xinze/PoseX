@@ -17,6 +17,8 @@ if [ "$DATASET" = "posex_self_dock" ]; then
     DATASET_FOLDER="data/dataset/posex/posex_self_docking_set"
 elif [ "$DATASET" = "posex_cross_dock" ]; then
     DATASET_FOLDER="data/dataset/posex/posex_cross_docking_set"
+elif [ "$DATASET" = "posex_supp" ]; then
+    DATASET_FOLDER="data/dataset/posex/posex_supp_set"
 else
     echo "Error: Unknown dataset ${DATASET}"
     exit 1
