@@ -21,7 +21,11 @@ def generate_posex_benchmark(args: argparse.Namespace):
         input_folder = os.path.join(args.input_folder, "posex_cross_docking_set")
 
     # Get the PDB_CCD_IDs
-    pdb_ccd_ids = os.listdir(input_folder)
+    pdb_ccd_ids = []
+    for pdb_ccd_id in os.listdir(input_folder):
+        if os.path.isdir(os.path.join(input_folder, pdb_ccd_id)):
+            pdb_ccd_ids.append(pdb_ccd_id)
+
     logger.info(f"Number of PoseX {args.dataset} Data: {len(pdb_ccd_ids)}")
     
     molecule_smiles_list, protein_sequence_list, pdb_path_list, sdf_path_list = [], [], [], []

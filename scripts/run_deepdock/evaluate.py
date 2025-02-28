@@ -22,7 +22,7 @@ def main(args: argparse.Namespace):
     model.load_state_dict(checkpoint['model_state_dict'])
 
     ligand_filename = f'{args.pdb_ccd_id}_ligand.mol2'
-    sdf_filename = f'{args.pdb_ccd_id}_ligand.sdf'
+    sdf_filename = f'{args.pdb_ccd_id}_ligand_start_conf.sdf'
     target_filename = f'{args.pdb_ccd_id}_protein.pdb'
     target_ply = f'{args.pdb_ccd_id}_protein.ply'
     output_filename = f'{args.pdb_ccd_id}_optimal.sdf'

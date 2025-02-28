@@ -56,7 +56,8 @@ def load_ligand(input_path: str, remove_hs: bool = False, sanitize: bool = False
     return mol
 
 
-def extract_complex_structure(receptor: Model, ligand: Optional[Chem.Mol], filter_hetero_residues: bool = False) -> Dict[str, Any]:
+def extract_complex_structure(receptor: Model, ligand: Optional[Chem.Mol], filter_hetero_residues: bool = False) -> \
+        Dict[str, Any]:
     """Extract the structure coordinates of a protein-ligand complex.
 
     Args:
@@ -88,7 +89,7 @@ def extract_complex_structure(receptor: Model, ligand: Optional[Chem.Mol], filte
             if filter_hetero_residues and len(residue.get_id()[0]) > 1:
                 invalid_residue_ids.append(residue.get_id())
                 continue
-            
+
             # Extract CA, N, and C atom coordinates
             ca, n, c = None, None, None
             residue_atom_coords = []
@@ -100,25 +101,26 @@ def extract_complex_structure(receptor: Model, ligand: Optional[Chem.Mol], filte
                 elif atom.get_name() == "C":
                     c = list(atom.get_vector())
                 residue_atom_coords.append(list(atom.get_vector()))
-                
+
             if ca is None or n is None or c is None:
                 invalid_residue_ids.append(residue.get_id())
                 continue
-            
+
             # Append valid residue coordinates
             chain_ca_coords.append(ca)
             chain_n_coords.append(n)
             chain_c_coords.append(c)
             chain_atom_coords.append(np.array(residue_atom_coords))
             residue_count += 1
-        
+
         # Remove invalid residues
         for residue_id in invalid_residue_ids:
             chain.detach_child(residue_id)
 
         # Compute minimum distance between ligand and chain
         if len(chain_atom_coords) > 0 and ligand_coords is not None:
-            min_chain_ligand_distance = np.min(spatial.distance.cdist(ligand_coords, np.concatenate(chain_atom_coords, axis=0)))
+            min_chain_ligand_distance = np.min(
+                spatial.distance.cdist(ligand_coords, np.concatenate(chain_atom_coords, axis=0)))
         else:
             min_chain_ligand_distance = np.inf
         min_chain_ligand_distances.append(min_chain_ligand_distance)
@@ -148,7 +150,7 @@ def extract_complex_structure(receptor: Model, ligand: Optional[Chem.Mol], filte
         if chain.get_id() not in valid_chain_ids:
             invalid_chain_ids.append(chain.get_id())
             continue
-        
+
         # Append valid chain coordinates
         valid_atom_coords.append(total_atom_coords[i])
         valid_ca_coords.append(total_ca_coords[i])
@@ -161,13 +163,14 @@ def extract_complex_structure(receptor: Model, ligand: Optional[Chem.Mol], filte
     total_ca_coords = np.concatenate(valid_ca_coords, axis=0)
     total_n_coords = np.concatenate(valid_n_coords, axis=0)
     total_c_coords = np.concatenate(valid_c_coords, axis=0)
-    
+
     # Remove invalid chains
     for invalid_chain_id in invalid_chain_ids:
         receptor.detach_child(invalid_chain_id)
-    
+
     # Check that the number of CA, N, and C atoms match
-    assert len(total_ca_coords) == len(total_n_coords) == len(total_c_coords), "Number of Ca atoms does not match N and C atoms."
+    assert len(total_ca_coords) == len(total_n_coords) == len(
+        total_c_coords), "Number of Ca atoms does not match N and C atoms."
 
     return {
         "receptor": receptor,
@@ -179,11 +182,11 @@ def extract_complex_structure(receptor: Model, ligand: Optional[Chem.Mol], filte
 
 
 def align_predicted_structure(
-    smoothing_factor: float, 
-    reference_ca_coords: np.ndarray, 
-    predicted_ca_coords: np.ndarray, 
-    reference_ligand_coords: Optional[np.ndarray], 
-    return_rotation: bool = False
+        smoothing_factor: float,
+        reference_ca_coords: np.ndarray,
+        predicted_ca_coords: np.ndarray,
+        reference_ligand_coords: Optional[np.ndarray],
+        return_rotation: bool = False
 ) -> Union[Tuple[Rotation, np.ndarray, np.ndarray], float]:
     """Perform an alignment of apo and holo protein structures and ligand coordinates using an optimized smoothing factor.
 
@@ -217,22 +220,24 @@ def align_predicted_structure(
     centered_predicted_ca_coords = predicted_ca_coords - predicted_ca_centroid
 
     # Compute rotation matrix
-    rotation, _ = spa.transform.Rotation.align_vectors(centered_reference_ca_coords, centered_predicted_ca_coords, weights)
+    rotation, _ = spa.transform.Rotation.align_vectors(centered_reference_ca_coords, centered_predicted_ca_coords,
+                                                       weights)
     if return_rotation:  # Return rotation matrix and centroids
         return rotation, reference_ca_centroid, predicted_ca_centroid
-    
+
     # Compute inverse root mean square error of reciprocal distances
     if reference_ligand_coords is not None:
         centered_reference_ligand_coords = reference_ligand_coords - reference_ca_centroid
         aligned_predicted_ca_coords = rotation.apply(centered_predicted_ca_coords)
-        aligned_predicted_reference_dists = spa.distance.cdist(aligned_predicted_ca_coords, centered_reference_ligand_coords)
+        aligned_predicted_reference_dists = spa.distance.cdist(aligned_predicted_ca_coords,
+                                                               centered_reference_ligand_coords)
         inv_r_rmse = np.sqrt(np.mean(((1 / reference_dists) - (1 / aligned_predicted_reference_dists)) ** 2))
     else:
         inv_r_rmse = np.nan
     return inv_r_rmse
 
 
-def run_structure_alignment(predicted_protein_pdb: str, predicted_ligand_sdf: Optional[str], 
+def run_structure_alignment(predicted_protein_pdb: str, predicted_ligand_sdf: Optional[str],
                             reference_protein_pdb: str, reference_ligand_sdf: str, model_type: str):
     """Run structure alignment for a predicted protein-ligand complex.
 
@@ -254,11 +259,15 @@ def run_structure_alignment(predicted_protein_pdb: str, predicted_ligand_sdf: Op
 
     # Extract CA coordinates
     if model_type != "alphafold3":
-        predicted_ca_coords = extract_complex_structure(predicted_receptor, reference_ligand, filter_hetero_residues=False)["ca_coords"]
-        reference_ca_coords = extract_complex_structure(reference_receptor, reference_ligand, filter_hetero_residues=False)["ca_coords"]
+        predicted_ca_coords = \
+            extract_complex_structure(predicted_receptor, reference_ligand, filter_hetero_residues=False)["ca_coords"]
+        reference_ca_coords = \
+            extract_complex_structure(reference_receptor, reference_ligand, filter_hetero_residues=False)["ca_coords"]
     else:
-        predicted_ca_coords = extract_complex_structure(predicted_receptor, reference_ligand, filter_hetero_residues=True)["ca_coords"]
-        reference_ca_coords = extract_complex_structure(reference_receptor, reference_ligand, filter_hetero_residues=True)["ca_coords"]
+        predicted_ca_coords = \
+            extract_complex_structure(predicted_receptor, reference_ligand, filter_hetero_residues=True)["ca_coords"]
+        reference_ca_coords = \
+            extract_complex_structure(reference_receptor, reference_ligand, filter_hetero_residues=True)["ca_coords"]
 
     # Extract ligand coordinates
     predicted_ligand_conformer = predicted_ligand.GetConformer()
@@ -266,7 +275,7 @@ def run_structure_alignment(predicted_protein_pdb: str, predicted_ligand_sdf: Op
     reference_ligand_coords = reference_ligand.GetConformer().GetPositions()
 
     # Optimize smoothing factor
-    try:    
+    try:
         smoothing_factor = minimize(
             align_predicted_structure,
             [0.1],
@@ -326,15 +335,15 @@ def run_structure_alignment_v2(predicted_protein_pdb: str, predicted_ligand_sdf:
         float: Best aligned RMSD
     """
     best_aligned_rmsd = np.inf
-    
-    reference_ligands = Chem.SDMolSupplier(reference_ligands_sdf, sanitize=False, removeHs=True)    
+
+    reference_ligands = Chem.SDMolSupplier(reference_ligands_sdf, sanitize=False, removeHs=True)
     for reference_ligand in reference_ligands:
         # Save reference ligand to temporary folder
         with tempfile.TemporaryDirectory() as temp_folder:
             reference_ligand_sdf = os.path.join(temp_folder, "reference_ligand.sdf")
             with Chem.SDWriter(reference_ligand_sdf) as w:
                 w.write(reference_ligand)
-        
+
             # Initialize pymol
             cmd.reinitialize()
             cmd.set("retain_order", 1)
@@ -342,12 +351,14 @@ def run_structure_alignment_v2(predicted_protein_pdb: str, predicted_ligand_sdf:
             # Load reference protein and ligand
             cmd.load(reference_protein_pdb, "reference_protein")
             cmd.load(reference_ligand_sdf, "reference_ligand")
-            cmd.select("reference_pocket", "br. (%reference_protein and name CA+C+N) w. 10.0 for (%reference_ligand and not h.)")
+            cmd.select("reference_pocket",
+                       "br. (%reference_protein and name CA+C+N) w. 10.0 for (%reference_ligand and not h.)")
 
             # Load predicted protein and ligand
             cmd.load(predicted_protein_pdb, "predicted_protein")
             cmd.load(predicted_ligand_sdf, "predicted_ligand")
-            cmd.select("predicted_pocket", "br. (%predicted_protein and name CA+C+N) w. 10.0 for (%predicted_ligand and not h.)")
+            cmd.select("predicted_pocket",
+                       "br. (%predicted_protein and name CA+C+N) w. 10.0 for (%predicted_ligand and not h.)")
 
             # Align predicted pocket and predicted ligand to reference pocket
             cmd.align("predicted_pocket", "reference_pocket")
@@ -357,6 +368,17 @@ def run_structure_alignment_v2(predicted_protein_pdb: str, predicted_ligand_sdf:
             stored.pred_coords = []
             cmd.iterate_state(1, "predicted_ligand", "stored.pred_coords.append((x, y, z))")
             predicted_ligand = Chem.MolFromMolFile(predicted_ligand_sdf)
+
+            # Cannot kekulie
+            if not predicted_ligand:
+                no_sanitize_mol = Chem.MolFromMolFile(predicted_ligand_sdf, sanitize=False)
+                no_sanitize_mol_conf = no_sanitize_mol.GetConformer()
+                predicted_ligand = Chem.Mol(reference_ligand)
+                predicted_ligand_conformer = predicted_ligand.GetConformer()
+                for atom_idx in range(no_sanitize_mol_conf.GetNumAtoms()):
+                    pos = predicted_ligand_conformer.GetAtomPosition(atom_idx)
+                    predicted_ligand_conformer.SetAtomPosition(atom_idx, pos)
+
             predicted_ligand_conformer = predicted_ligand.GetConformer()
             for i, pred_coord in enumerate(stored.pred_coords):
                 x, y, z = pred_coord
@@ -372,7 +394,7 @@ def run_structure_alignment_v2(predicted_protein_pdb: str, predicted_ligand_sdf:
                 cmd.save(predicted_protein_pdb.replace(".pdb", "_aligned.pdb"), "predicted_protein")
                 with Chem.SDWriter(predicted_ligand_sdf.replace(".sdf", f"_aligned.sdf")) as f:
                     f.write(predicted_ligand)
-            
+
     return best_aligned_rmsd
 
 
@@ -393,6 +415,7 @@ command="compare-ligand-structures \
 
 docker run -u $(id -u):$(id -g) --rm --volume {mount}:{mount} $IMAGE_NAME $command
 """
+
 
 def run_ost_compare_ligand_structure(predicted_protein_pdb: str, predicted_ligand_sdf: str,
                                      reference_protein_pdb: str, reference_ligands_sdf: str) -> float:
@@ -417,7 +440,7 @@ def run_ost_compare_ligand_structure(predicted_protein_pdb: str, predicted_ligan
     output_path = os.path.join(output_folder, "compare_ligand_structure.json")
 
     mount = os.path.abspath(".")
-    
+
     running_script = OST_COMPARE_SCRIPT.format(
         mount=mount,
         predicted_protein_path=predicted_protein_path,
@@ -456,14 +479,20 @@ def main(args: argparse.Namespace):
             print(f"Directory {pdb_ccd_id} does not exist")
             continue
 
-        predicted_protein_pdb = os.path.join(args.model_output_folder, f"{pdb_ccd_id}", f"{pdb_ccd_id}_model_protein.pdb")
+        predicted_protein_pdb = os.path.join(args.model_output_folder, f"{pdb_ccd_id}",
+                                             f"{pdb_ccd_id}_model_protein.pdb")
         predicted_ligand_sdf = os.path.join(args.model_output_folder, f"{pdb_ccd_id}", f"{pdb_ccd_id}_model_ligand.sdf")
         if not os.path.exists(predicted_protein_pdb) or not os.path.exists(predicted_ligand_sdf):
             print(f"Predicted protein or ligand does not exist for {pdb_ccd_id}")
             continue
 
-        reference_protein_pdb = os.path.join(args.dataset_folder, f"{pdb_ccd_id.upper()}", f"{pdb_ccd_id.upper()}_protein.pdb")
-        reference_ligands_sdf = os.path.join(args.dataset_folder, f"{pdb_ccd_id.upper()}", f"{pdb_ccd_id.upper()}_ligands.sdf")
+        reference_protein_pdb = os.path.join(args.dataset_folder, f"{pdb_ccd_id.upper()}",
+                                             f"{pdb_ccd_id.upper()}_ref_protein.pdb")
+        if not os.path.exists(reference_protein_pdb):
+            reference_protein_pdb = os.path.join(args.dataset_folder, f"{pdb_ccd_id.upper()}",
+                                                 f"{pdb_ccd_id.upper()}_protein.pdb")
+        reference_ligands_sdf = os.path.join(args.dataset_folder, f"{pdb_ccd_id.upper()}",
+                                             f"{pdb_ccd_id.upper()}_ligands.sdf")
 
         # try:
         #     best_aligned_rmsd = run_ost_compare_ligand_structure(predicted_protein_pdb=predicted_protein_pdb,
@@ -490,5 +519,5 @@ if __name__ == "__main__":
     parser.add_argument("--model_output_folder", type=str, required=True, help="Path to the model output folder")
     parser.add_argument("--model_type", type=str, required=True, help="Model type")
     args = parser.parse_args()
-    
+
     main(args)

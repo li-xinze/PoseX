@@ -20,8 +20,7 @@ fi
 
 docker run -it \
     --privileged=true \
-    --gpus all \
-    -e CUDA_VISIBLE_DEVICES="2" \
+    --gpus "device=0" \
     -v $NEURALPLEXER_INPUT_FOLDER:/input \
     -v $MODEL_CHECKPOINT:/input/complex_structure_prediction.ckpt \
     -v $NEURALPLEXER_OUTPUT_FOLDER:/output \

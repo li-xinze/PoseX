@@ -4,7 +4,7 @@ import glob
 import shutil
 import numpy as np
 import pandas as pd
-# import prody
+import prody
 from Bio.PDB import MMCIFParser, PDBIO
 from biopandas.pdb import PandasPdb
 
@@ -23,12 +23,14 @@ def convert_ligand_pdb_to_sdf(model_output_folder: str, pdb_ccd_id: str, ligand_
     Returns:
         bool: Whether the conversion is successful
     """
-    mol = Chem.MolFromPDBFile(os.path.join(model_output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.pdb"), sanitize=False)
+    mol = Chem.MolFromPDBFile(os.path.join(model_output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.pdb"),
+                              sanitize=False)
     try:
         template = AllChem.MolFromSmiles(ligand_smiles)
         mol = AllChem.AssignBondOrdersFromTemplate(template, mol)
     except Exception as e:
-        mol = Chem.MolFromPDBFile(os.path.join(model_output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.pdb"), sanitize=False)
+        mol = Chem.MolFromPDBFile(os.path.join(model_output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.pdb"),
+                                  sanitize=False)
         print(f"Error assigning bond orders for ligand {pdb_ccd_id}: {e}")
 
     try:
@@ -109,7 +111,8 @@ def extract_chai_output(args: argparse.Namespace):
 
         # Parse the MMCIFFile to PDB
         parser = MMCIFParser()
-        structure = parser.get_structure(pdb_ccd_id, os.path.join(args.output_folder, f"{pdb_ccd_id}/pred.model_idx_{best_model_idx}.cif"))
+        structure = parser.get_structure(pdb_ccd_id, os.path.join(args.output_folder,
+                                                                  f"{pdb_ccd_id}/pred.model_idx_{best_model_idx}.cif"))
         print("best_model_idx: ", best_model_idx)
 
         for model in structure:
@@ -196,7 +199,7 @@ def extract_rfaa_output(args: argparse.Namespace):
     print("Number of Benchmark Data: ", len(docking_data))
 
     error_process_ligand_ids = []
-    
+
     for _, row in docking_data.iterrows():
         print(f"Processing {row['PDB_CCD_ID']}")
         pdb_ccd_id = row["PDB_CCD_ID"]
@@ -386,11 +389,10 @@ def extract_gnina_output(args: argparse.Namespace):
         input_sdf_path = os.path.join(output_dir, f"{pdb_ccd_id}_ligand.sdf")
         output_sdf_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_ligand.sdf")
         try:
-            # suppl = Chem.SDMolSupplier(input_sdf_path)
-            # mol = suppl[0]
-            # writer = Chem.SDWriter(output_sdf_path)
-            # writer.write(mol, confId=0)
-            shutil.copy(input_sdf_path, output_sdf_path)
+            suppl = Chem.SDMolSupplier(input_sdf_path)
+            mol = suppl[0]
+            writer = Chem.SDWriter(output_sdf_path)
+            writer.write(mol, confId=0)
             shutil.copy(row["PROTEIN_PDB_PATH"], output_pdb_path)
         except Exception as e:
             error_process_ligand_ids.append(pdb_ccd_id)
@@ -432,7 +434,7 @@ def extract_interformer_output(args: argparse.Namespace):
     for _, row in docking_data.iterrows():
         print(f"Processing {row['PDB_CCD_ID']}")
         pdb_ccd_id = row["PDB_CCD_ID"]
-        pdb = row["PDB_ID"]
+        pdb = pdb_ccd_id.split("_")[0]
         output_dir = os.path.join(args.output_folder, pdb_ccd_id)
         os.makedirs(output_dir, exist_ok=True)
 
@@ -467,8 +469,102 @@ def extract_equibind_output(args: argparse.Namespace):
         input_sdf_path = os.path.join(output_dir, "lig_equibind_corrected.sdf")
         output_sdf_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_ligand.sdf")
         try:
+            supplier = Chem.SDMolSupplier(input_sdf_path, sanitize=False, removeHs=False)
+            mol = supplier[0]
+            mol = Chem.RemoveHs(mol, sanitize=False)
+            writer = Chem.SDWriter(output_sdf_path)
+            writer.write(mol, confId=0)
             shutil.copy(row["PROTEIN_PDB_PATH"], output_pdb_path)
+            # shutil.copy(input_sdf_path, output_sdf_path)
+        except Exception as e:
+            error_process_ligand_ids.append(pdb_ccd_id)
+            print(f"Error processing ligand for {pdb_ccd_id}: {e}")
+
+    print(f"Number of Error Process Ligand IDs: {len(error_process_ligand_ids)}")
+    print(f"Error Process Ligand IDs: {error_process_ligand_ids}")
+
+
+def extract_protenix_output(args: argparse.Namespace):
+    docking_data = pd.read_csv(args.input_file)
+    print("Number of Benchmark Data: ", len(docking_data))
+
+    error_process_ligand_ids = []
+
+    for _, row in docking_data.iterrows():
+        print(f"Processing {row['PDB_CCD_ID']}")
+        pdb_ccd_id = row["PDB_CCD_ID"]
+        ligand_smiles = row["LIGAND_SMILES"]
+
+        if not os.path.exists(os.path.join(args.output_folder, f"{pdb_ccd_id}")):
+            print(f"Directory {pdb_ccd_id} does not exist")
+            continue
+
+        # Parse the MMCIFFile
+        pdb = prody.parseMMCIF(
+            os.path.join(args.output_folder, f"{pdb_ccd_id}/seed_101/predictions/{pdb_ccd_id}_seed_101_sample_0.cif"))
+        protein = pdb.select("protein")
+        ligand = pdb.select("not (protein or nucleotide or water)")
+
+        prody.writePDB(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_protein.pdb"), protein)
+        prody.writePDB(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.pdb"), ligand)
+
+        # Replace the ligand ID from LIG_Z to LIG
+        with open(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.pdb"), 'r') as f:
+            content = f.read()
+        content = content.replace("101", "LIG")
+        with open(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.pdb"), 'w') as f:
+            f.write(content)
+
+        # Convert the ligand PDB to SDF
+        convert_success = convert_ligand_pdb_to_sdf(args.output_folder, pdb_ccd_id, ligand_smiles)
+        if not convert_success:
+            print(f"Error processing ligand for {pdb_ccd_id}")
+            error_process_ligand_ids.append(pdb_ccd_id)
+            continue
+    print(f"Number of Error Process Ligand IDs: {len(error_process_ligand_ids)}")
+    print(f"Error Process Ligand IDs: {error_process_ligand_ids}")
+
+
+def extract_surfdock_output(args: argparse.Namespace):
+    docking_data = pd.read_csv(args.input_file)
+    print("Number of Posebusters Data: ", len(docking_data))
+    error_process_ligand_ids = []
+    surfdock_output_dir = os.path.join(args.output_folder, "SurfDock_docking_result")
+    for _, row in docking_data.iterrows():
+        print(f"Processing {row['PDB_CCD_ID']}")
+        pdb_ccd_id = row["PDB_CCD_ID"]
+        output_dir = os.path.join(args.output_folder, pdb_ccd_id)
+        os.makedirs(output_dir, exist_ok=True)
+
+        matched_dir = ""
+        found = 0
+        for matched_dir in os.listdir(surfdock_output_dir):
+            if pdb_ccd_id in matched_dir:
+                found = 1
+                break
+        if found == 0:
+            error_process_ligand_ids.append(pdb_ccd_id)
+            print(f"Error processing ligand for {pdb_ccd_id}")
+            continue
+
+        sdf_file = ""
+        found = 0
+        for sdf_file in os.listdir(os.path.join(surfdock_output_dir, matched_dir)):
+            if "rank_1_" in sdf_file:
+                found = 1
+                break
+        if found == 0:
+            error_process_ligand_ids.append(pdb_ccd_id)
+            print(f"Error processing ligand for {pdb_ccd_id}")
+            continue
+
+        input_sdf_path = os.path.join(surfdock_output_dir, matched_dir, sdf_file)
+
+        output_pdb_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_protein.pdb")
+        output_sdf_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_ligand.sdf")
+        try:
             shutil.copy(input_sdf_path, output_sdf_path)
+            shutil.copy(row["PROTEIN_PDB_PATH"], output_pdb_path)
         except Exception as e:
             error_process_ligand_ids.append(pdb_ccd_id)
             print(f"Error processing ligand for {pdb_ccd_id}: {e}")
@@ -506,6 +602,10 @@ def main(args: argparse.Namespace):
         extract_interformer_output(args)
     elif args.model_type == "equibind":
         extract_equibind_output(args)
+    elif args.model_type == "protenix":
+        extract_protenix_output(args)
+    elif args.model_type == "surfdock":
+        extract_surfdock_output(args)
     else:
         raise ValueError(f"Unsupported model type: {args.model_type}")
 

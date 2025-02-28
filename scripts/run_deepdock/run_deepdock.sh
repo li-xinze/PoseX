@@ -24,7 +24,7 @@ conda activate openbabel
 
 for subdir in $DEEPDOCK_INPUT_FOLDER/*; do
     subdir_name=$(basename $subdir)
-    sdf_file="$subdir/"$subdir_name"_ligand_start_conf.sdf"
+    sdf_file="$subdir/"$subdir_name"_ligand.sdf"
     output_file="$subdir/"$subdir_name"_ligand.mol2"
     obabel $sdf_file -O $output_file
 done

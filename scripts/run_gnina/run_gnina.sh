@@ -13,8 +13,7 @@ RUNNING_SCRIPTS="${PWD}/scripts/run_gnina/run_gnina_help.sh"
 
 docker run -it \
     --privileged=true \
-    --gpus all \
-    -e CUDA_VISIBLE_DEVICES="1" \
+    --gpus "device=0" \
     -v $GNINA_INPUT_FOLDER:/input \
     -v $GNINA_OUTPUT_FOLDER:/output \
     -v $RUNNING_SCRIPTS:/run_gnina_help.sh \

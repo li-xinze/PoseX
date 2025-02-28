@@ -7,12 +7,12 @@ import sys
 import pandas as pd
 import argparse
 
-# os.environ['CUDA_VISIBLE_DEVICES'] = "1"
+os.environ['CUDA_VISIBLE_DEVICES'] = "1"
 
 
 def gen_demo_dock_csv(sdf_f, target, csv_path, isuff=True):
     data = []
-    suppl = Chem.SDMolSupplier(sdf_f)
+    suppl = Chem.SDMolSupplier(sdf_f, sanitize=False)
     for i, mol in enumerate(suppl):
         m_id = mol.GetProp('_Name')
         if mol is not None:
@@ -27,23 +27,30 @@ def gen_demo_dock_csv(sdf_f, target, csv_path, isuff=True):
 
 def main(args: argparse.Namespace):
     os.chdir(os.path.join(args.interformer_exec_dir))
-    for pdb_ccd in os.listdir(args.input_dir)[:1]:
+    for pdb_ccd in os.listdir(args.input_dir):
         pdb = pdb_ccd.split("_")[0]
         task_dir = os.path.join(args.input_dir, pdb_ccd)
         raw_folder = os.path.join(task_dir, "raw")
         ligand_folder = os.path.join(task_dir, "ligand")
-        utf_folder = os.path.join(task_dir, "uff")
+        crystal_ligand_folder = os.path.join(task_dir, "crystal_ligand")
+        uff_folder = os.path.join(task_dir, "uff")
         pocket_folder = os.path.join(task_dir, "pocket")
         raw_pocket_folder = os.path.join(raw_folder, "pocket")
         os.makedirs(ligand_folder, exist_ok=True)
-        os.makedirs(utf_folder, exist_ok=True)
+        os.makedirs(crystal_ligand_folder, exist_ok=True)
+        os.makedirs(uff_folder, exist_ok=True)
         os.makedirs(pocket_folder, exist_ok=True)
         input_protein = os.path.join(raw_folder, f"{pdb_ccd}_protein.pdb")
-        input_ligand = os.path.join(raw_folder, f"{pdb_ccd}_ligand_start_conf.sdf")
+        input_ligand = os.path.join(raw_folder, f"{pdb_ccd}_ligand.sdf")
+        start_conf = os.path.join(raw_folder, f"{pdb_ccd}_ligand_start_conf.sdf")
+
+        crystal_ligand_output_path = os.path.join(crystal_ligand_folder, f"{pdb}_docked.sdf")
+        os.system(f"obabel {start_conf} -p 7.4 -O {crystal_ligand_output_path}")
+        os.system(f"python tools/rdkit_ETKDG_3d_gen.py {crystal_ligand_folder} {uff_folder}")
 
         ligand_with_hydrogen_path = os.path.join(ligand_folder, f"{pdb}_docked.sdf")
         os.system(f"obabel {input_ligand} -p 7.4 -O {ligand_with_hydrogen_path}")
-        os.system(f"python tools/rdkit_ETKDG_3d_gen.py {ligand_folder} {utf_folder}")
+        # os.system(f"python tools/rdkit_ETKDG_3d_gen.py {ligand_folder} {uff_folder}")
 
         reduced_protein_path = os.path.join(raw_pocket_folder, f"{pdb}_reduce.pdb")
         os.system(f"mkdir -p {raw_pocket_folder} && reduce {input_protein} > {reduced_protein_path}")
@@ -67,9 +74,9 @@ def main(args: argparse.Namespace):
                             -reload \
                             -debug"
         os.system(predict_energy_cmd)
-
+        # os.system(f"cp {start_conf} {energy_output}/uff/{pdb}_uff.sdf")
         os.system(
-            f'OMP_NUM_THREADS="64,64" python docking/reconstruct_ligands.py -y --cwd {energy_output} -y --find_all find')
+            f'OMP_NUM_THREADS="64,64" python docking/reconstruct_ligands.py -y --cwd {energy_output} -y --find_all --uff_folder uff find')
         os.system(f'python docking/reconstruct_ligands.py --cwd {energy_output} --find_all stat')
         os.system(
             f'python docking/merge_summary_input.py {os.path.join(energy_output, "ligand_reconstructing/stat_concated.csv")} {csv_path}')

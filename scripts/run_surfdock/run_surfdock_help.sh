@@ -25,7 +25,7 @@ NUM_GPUS=${#gpu_array[@]}
 export CUDA_VISIBLE_DEVICES=${gpu_string}
 
 main_process_port=2951${gpu_array[-1]}
-project_name='SurfDock_eval_samples/repeat_250102'
+project_name='SurfDock_eval_samples/repeat_cross'
 surface_out_dir=${SurfDockdir}/data/eval_sample_dirs/${project_name}/test_samples_8A_surface
 data_dir=${INPUT_DIR}
 out_csv_file=${SurfDockdir}/data/eval_sample_dirs/${project_name}/input_csv_files/test_samples.csv
@@ -102,7 +102,7 @@ state=$command
 #------------------------------------------------------------------------------------------------#
 #------------------------  Step4 : Start Sampling Ligand Confromers  ----------------------------#
 #------------------------------------------------------------------------------------------------#
-echo '------------------------  Step3 : Start Sampling Ligand Confromers  ----------------------------'
+echo '------------------------  Step4 : Start Sampling Ligand Confromers  ----------------------------'
 
 diffusion_model_dir=${model_temp}/model_weights/docking
 confidence_model_base_dir=${model_temp}/model_weights/posepredict

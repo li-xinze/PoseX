@@ -116,11 +116,11 @@ def generate_boltz_input(args: argparse.Namespace):
 
 def generate_rfaa_input(args: argparse.Namespace):
     """Generate RoseTTAFold-All-Atom input for a given docking data."""
-    
+
     docking_data = pd.read_csv(args.input_file)
     for _, row in tqdm(docking_data.iterrows(), total=len(docking_data)):
-        task_dict = {"defaults": ["base"], 
-                     "job_name": row["PDB_CCD_ID"], 
+        task_dict = {"defaults": ["base"],
+                     "job_name": row["PDB_CCD_ID"],
                      "output_path": f"./predictions/{row['PDB_CCD_ID']}",
                      "protein_inputs": {},
                      "sm_inputs": {}}
@@ -147,7 +147,7 @@ def generate_rfaa_input(args: argparse.Namespace):
         output_path = os.path.join(args.output_folder, f"{row['PDB_CCD_ID']}.yaml")
         with open(output_path, "w") as f:
             yaml.dump(task_dict, f)
-    
+
 
 def generate_dynamicbind_input(args: argparse.Namespace):
     """Generate DynaimcBind input for a given docking data."""
@@ -202,7 +202,11 @@ def generate_deepdock_input(args: argparse.Namespace):
         protein_path = row["PROTEIN_PDB_PATH"]
         ligand_path = row["LIGAND_SDF_PATH"]
         task_dir = os.path.join(args.output_folder, task_name)
+        # TODO: temp
+        crystal_ligand_path = os.path.join(os.path.dirname(ligand_path), f"{task_name}_ligand.sdf")
+
         os.makedirs(task_dir, exist_ok=True)
+        shutil.copy(crystal_ligand_path, task_dir)
         shutil.copy(protein_path, task_dir)
         shutil.copy(ligand_path, task_dir)
 
@@ -241,10 +245,12 @@ def generate_gnina_input(args: argparse.Namespace):
         task_name = row["PDB_CCD_ID"]
         protein_path = row["PROTEIN_PDB_PATH"]
         ligand_path = row["LIGAND_SDF_PATH"]
+        crystal_ligand_path = os.path.join(os.path.dirname(ligand_path), f"{task_name}_ligand.sdf")
         task_dir = os.path.join(args.output_folder, task_name)
         os.makedirs(task_dir, exist_ok=True)
         shutil.copy(protein_path, task_dir)
         shutil.copy(ligand_path, task_dir)
+        shutil.copy(crystal_ligand_path, task_dir)
 
 
 def generate_unimol_input(args: argparse.Namespace):
@@ -282,7 +288,9 @@ def generate_unimol_input(args: argparse.Namespace):
         protein_path = row["PROTEIN_PDB_PATH"]
         ligand_path = row["LIGAND_SDF_PATH"]
         task_dir = os.path.join(args.output_folder, task_name)
-        calculated_docking_grid_sdf(ligand_path, task_dir, task_name)
+        # TODO: temp
+        crystal_ligand_path = os.path.join(os.path.dirname(ligand_path), f"{task_name}_ligand.sdf")
+        calculated_docking_grid_sdf(crystal_ligand_path, task_dir, task_name)
         shutil.copy(protein_path, task_dir)
         shutil.copy(ligand_path, task_dir)
 
@@ -295,10 +303,12 @@ def generate_interformer_input(args: argparse.Namespace):
         task_name = row["PDB_CCD_ID"]
         protein_path = row["PROTEIN_PDB_PATH"]
         ligand_path = row["LIGAND_SDF_PATH"]
+        crystal_ligand_path = os.path.join(os.path.dirname(ligand_path), f"{task_name}_ligand.sdf")
         task_dir = os.path.join(args.output_folder, task_name, "raw")
         os.makedirs(task_dir, exist_ok=True)
         shutil.copy(protein_path, task_dir)
         shutil.copy(ligand_path, task_dir)
+        shutil.copy(crystal_ligand_path, task_dir)
 
 
 def generate_equibind_input(args: argparse.Namespace):
@@ -364,11 +374,12 @@ def generate_surfdock_input(args: argparse.Namespace):
         task_name = row["PDB_CCD_ID"]
         protein_path = row["PROTEIN_PDB_PATH"]
         ligand_path = row["LIGAND_SDF_PATH"]
+        crystal_ligand_path = os.path.join(os.path.dirname(ligand_path), f"{task_name}_ligand.sdf")
         task_dir = os.path.join(args.output_folder, task_name)
         os.makedirs(task_dir, exist_ok=True)
         protein_output_path = os.path.join(task_dir, f"{task_name}_protein_processed.pdb")
         shutil.copy(protein_path, protein_output_path)
-        shutil.copy(ligand_path, task_dir)
+        shutil.copy(crystal_ligand_path, task_dir)
 
 
 def main(args: argparse.Namespace):
