@@ -165,5 +165,5 @@ def test_fix_cif(pdbx_fn: Path, cap_n_ter="ACE", cap_c_ter="NME"):
 if __name__ == "__main__":
     fix_pdb()
     test_fix_cif(
-        "/hpc-cache-pfs/home/xyj/code/protein_ligand_docking_benchmark/posex/mmcif_raw/8UCB_X1T.cif"
+        "/{your_path}/protein_ligand_docking_benchmark/posex/mmcif_raw/8UCB_X1T.cif"
     )
