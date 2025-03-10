@@ -45,9 +45,8 @@ def run_once(
 
     processed_dir = output_dir / pdb_fn.parent.name
     processed_dir.mkdir(parents=True, exist_ok=True)
-    # try:
-    if True:
-        # sdf_fn = Path(str(pdb_fn).replace("_protein.pdb", "_ligand.sdf"))
+    try:
+
         fixer_noh = pdb_to_fixer(pdb_fn, cif_fn)
         prot_mol_h = fixer_into_protein_mol(fixer_noh, residues_tables)
         protein_mol_to_file(prot_mol_h, out_pdb_fn)
@@ -77,12 +76,12 @@ def run_once(
 
         del relax_tool
 
-    # except:
-    #     tb = traceback.format_exc()
-    #     tmp_error_log = output_dir.parent / "error.log"
-    #     with open(tmp_error_log, "a") as f:
-    #         f.write(f"#PDBNAME#: {tmp_name}\n{tb}")
-    #     logger.info(f"{tmp_error_log=}")
+    except:
+        tb = traceback.format_exc()
+        tmp_error_log = output_dir.parent / "error.log"
+        with open(tmp_error_log, "a") as f:
+            f.write(f"#PDBNAME#: {tmp_name}\n{tb}")
+        logger.info(f"{tmp_error_log=}")
 
     return True
 
@@ -112,7 +111,7 @@ def run_batch(pdb_fns, output_dir, num_proc: int = 6):
 @click.option(
     "--input_dir",
     type=str,
-    default="/Users/josephxu/Documents/projects/doing_projects/DATA/fabind/posex_self_dock/output",
+    default="{path_to_data}/fabind/posex_self_dock/output",
 )
 @click.option("--output_dir", type=str, default=None)
 @click.option("--num_proc", type=int, default=1)
@@ -128,9 +127,7 @@ def main(**kwargs):
         output_dir = Path(kwargs["output_dir"])
     pdb_fns = list(input_dir.glob("*/*.pdb"))
 
-
     run_batch(pdb_fns, output_dir, int(kwargs["num_proc"]))
-    pass
 
 
 if __name__ == "__main__":

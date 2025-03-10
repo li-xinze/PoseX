@@ -61,6 +61,10 @@ bash ./scripts/run_boltz/run_boltz.sh <dataset>
 
 ### 4. Energy Minimization (Not yet developed)
 
+```
+python -m scripts.relax_model_outputs --input_dir <input_dir>
+```
+
 ### 5. Extract Model Outputs
 
 Extract predicted structures from model outputs:
