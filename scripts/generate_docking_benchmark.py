@@ -17,8 +17,10 @@ def generate_posex_benchmark(args: argparse.Namespace):
         input_folder = os.path.join(args.input_folder, "astex_diverse_set")
     elif args.dataset == "posex_self_dock":
         input_folder = os.path.join(args.input_folder, "posex_self_docking_set")
-    else:
+    elif args.dataset == "posex_cross_dock":
         input_folder = os.path.join(args.input_folder, "posex_cross_docking_set")
+    else:
+        input_folder = os.path.join(args.input_folder, "posex_supp_set")
 
     # Get the PDB_CCD_IDs
     pdb_ccd_ids = []
@@ -67,7 +69,7 @@ def generate_posex_benchmark(args: argparse.Namespace):
 
 def main(args: argparse.Namespace):
     # Check if the dataset is valid
-    if args.dataset not in ["astex", "posex_self_dock", "posex_cross_dock"]:
+    if args.dataset not in ["astex", "posex_self_dock", "posex_cross_dock", "posex_supp"]:
         raise ValueError(f"Unknown dataset: {args.dataset}")
     
     # Check if the output folder exists, if not create it

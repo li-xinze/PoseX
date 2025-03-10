@@ -1,5 +1,6 @@
 import argparse
 import os
+import copy
 import glob
 import shutil
 import numpy as np
@@ -36,6 +37,34 @@ def convert_ligand_pdb_to_sdf(model_output_folder: str, pdb_ccd_id: str, ligand_
         Chem.SanitizeMol(test_mol)
     except Exception as e:
         print(f"Sanitization failed for ligand {pdb_ccd_id}: {e}")
+        return False
+
+    writer = Chem.SDWriter(os.path.join(model_output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.sdf"))
+    writer.write(mol)
+    writer.close()
+    return True
+
+
+def assign_ligand_pdb_to_sdf(model_output_folder: str, pdb_ccd_id: str, sdf_mol: Chem.Mol) -> bool:
+    """Assign the coordinates of the pdb mol to the sdf mol
+
+    Args:
+        model_output_folder (str): Path to the model output folder
+        pdb_ccd_id (str): PDB_CCD_ID
+        sdf_mol (Chem.Mol): RDKit mol
+
+    Returns:
+        bool: Whether the conversion is successful
+    """
+    pdb_mol = Chem.MolFromPDBFile(os.path.join(model_output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.pdb"), sanitize=False)
+    mol = copy.deepcopy(sdf_mol)
+    try: 
+        for atom in pdb_mol.GetAtoms():
+            atom_idx = atom.GetIdx()
+            assert atom.GetAtomicNum() == mol.GetAtomWithIdx(atom_idx).GetAtomicNum()
+            mol.GetConformer().SetAtomPosition(atom_idx, pdb_mol.GetConformer().GetAtomPosition(atom_idx))
+    except Exception as e:
+        print(f"Error assigning coordinates for ligand {pdb_ccd_id}: {e}")
         return False
 
     writer = Chem.SDWriter(os.path.join(model_output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.sdf"))
@@ -200,26 +229,29 @@ def extract_rfaa_output(args: argparse.Namespace):
         print(f"Processing {row['PDB_CCD_ID']}")
         pdb_ccd_id = row["PDB_CCD_ID"]
         ligand_smiles = row["LIGAND_SMILES"]
+        if not os.path.exists(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.pdb")):
 
-        if not os.path.exists(os.path.join(args.output_folder, f"{pdb_ccd_id}")):
-            print(f"Directory {pdb_ccd_id} does not exist")
-            continue
+            if not os.path.exists(os.path.join(args.output_folder, f"{pdb_ccd_id}")):
+                print(f"Directory {pdb_ccd_id} does not exist")
+                continue
 
-        pdb_path = os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}.pdb")
-        if not os.path.exists(pdb_path):
-            print(f"PDB file {pdb_path} does not exist")
-            continue
+            pdb_path = os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}.pdb")
+            if not os.path.exists(pdb_path):
+                print(f"PDB file {pdb_path} does not exist")
+                continue
 
-        # Parse the PDBFile
-        pdb = prody.parsePDB(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}.pdb"))
-        protein = pdb.select("protein")
-        ligand = pdb.select("not (protein or nucleotide or water)")
+            # Parse the PDBFile
+            pdb = prody.parsePDB(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}.pdb"))
+            protein = pdb.select("protein")
+            ligand = pdb.select("not (protein or nucleotide or water)")
 
-        prody.writePDB(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_protein.pdb"), protein)
-        prody.writePDB(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.pdb"), ligand)
+            prody.writePDB(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_protein.pdb"), protein)
+            prody.writePDB(os.path.join(args.output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.pdb"), ligand)
 
         # Convert the ligand PDB to SDF
-        convert_success = convert_ligand_pdb_to_sdf(args.output_folder, pdb_ccd_id, ligand_smiles)
+        ligand_sdf_path = row["LIGAND_SDF_PATH"]
+        sdf_mol = Chem.SDMolSupplier(ligand_sdf_path)[0]
+        convert_success = assign_ligand_pdb_to_sdf(args.output_folder, pdb_ccd_id, sdf_mol)
         if not convert_success:
             print(f"Error processing ligand for {pdb_ccd_id}")
             error_process_ligand_ids.append(pdb_ccd_id)
