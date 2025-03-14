@@ -220,7 +220,7 @@ def assign_chains(fixer: PDBFixerWrapper):
         tmp_res_names = [residue.name for residue in chain._residues]
         tmp_res_names_set = list(set(tmp_res_names))
         if len(tmp_res_names) > 20 and all(
-            [x in PROTEIN_RESIDUES for x in tmp_res_names_set]
+            [x in PROTEIN_RESIDUES + list(METALS) for x in tmp_res_names_set]
         ):
             protein_chains_idxs[chain.index] = chain.id
 
