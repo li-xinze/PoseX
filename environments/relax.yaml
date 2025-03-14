@@ -2,12 +2,15 @@ name: relax
 channels:
   - conda-forge
 dependencies:
-  - openmmforcefields
-  - openmm
-  - openff-toolkit
-  - biotite
-  - pdbfixer
-  - ambertools
-  - rdkit
-  - click
+  - python=3.11.10=hc5c86c4_3_cpython
+  - openmmforcefields=0.14.2=pyhd8ed1ab_0
+  - openmm=8.2.0=py311h5db57db_0
+  - openff-toolkit=0.16.7=pyhd8ed1ab_1
+  - pdbfixer=1.11=pyhd8ed1ab_0
+  - ambertools=24.8=cuda_None_nompi_py311h9353165_101
+  - rdkit=2024.09.6=py311h4bf1da0_0
+  - click=8.1.7=unix_pyh707e725_0
+  - pip=24.2=pyh8b19718_1
+  - pip:
+      - biotite==1.1.0
   
