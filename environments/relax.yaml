@@ -1,0 +1,13 @@
+name: relax
+channels:
+  - conda-forge
+dependencies:
+  - openmmforcefields
+  - openmm
+  - openff-toolkit
+  - biotite
+  - pdbfixer
+  - ambertools
+  - rdkit
+  - click
+  
