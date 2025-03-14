@@ -59,13 +59,7 @@ For example, run Boltz-1:
 bash ./scripts/run_boltz/run_boltz.sh <dataset>
 ```
 
-### 4. Energy Minimization (Not yet developed)
-
-```
-python -m scripts.relax_model_outputs --input_dir <input_dir>
-```
-
-### 5. Extract Model Outputs
+### 4. Extract Model Outputs
 
 Extract predicted structures from model outputs:
 
@@ -73,12 +67,18 @@ Extract predicted structures from model outputs:
 bash ./scripts/extract_model_output.sh <dataset> <model_type>
 ```
 
+### 5. Energy Minimization (Not yet developed)
+
+```
+python -m scripts.relax_model_outputs --input_dir <input_dir> --cif_dir <cif_dir>
+```
+
 ### 6. Align Predicted Structures
 
 Align predicted structures to the reference structures:
 
 ```bash
-bash ./scripts/complex_structure_alignment.sh <dataset> <model_type>
+bash ./scripts/complex_structure_alignment.sh <dataset> <model_type> <relax_mode>
 ```
 
 ### 7. Calculate Benchmark Result
@@ -86,7 +86,7 @@ bash ./scripts/complex_structure_alignment.sh <dataset> <model_type>
 Calculate evaluation metrics using PoseBusters:
 
 ```bash
-bash ./scripts/calculate_benchmark_result.sh <dataset> <model_type>
+bash ./scripts/calculate_benchmark_result.sh <dataset> <model_type> <relax_mode>
 ```
 
 ## Environment Setup

@@ -492,6 +492,6 @@ def protein_mol_to_file(protein_mol: Chem.Mol, out_fn: str | Path = None):
 
 def ligand_rdmol_to_file(ligand_mol: Chem.Mol, out_fn: str) -> None:
     with Chem.SDWriter(out_fn) as writer:
+        ligand_mol = Chem.RemoveHs(ligand_mol)
         writer.write(ligand_mol)
-
     return

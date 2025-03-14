@@ -25,6 +25,7 @@ NUM_CPUS = mp.cpu_count()
 
 def run_once(
     pdb_fn: Path,
+    cif_dir: Path,
     output_dir: Path,
     residues_tables: tuple[Dict, Dict, Dict],
     num_threads: int = 1,
@@ -33,13 +34,13 @@ def run_once(
     tmp_items = pdb_fn.stem.split("_")
     tmp_name = "_".join(tmp_items[:2])
     sdf_fn = pdb_fn.parent / f"{tmp_name}_model_ligand.sdf"
-    cif_fn = pdb_fn.parent / f"{tmp_items[0]}.cif"
+    cif_fn = cif_dir / f"{tmp_items[0].upper()}.cif"
     work_dir = output_dir / f"{tmp_name}"
     work_dir.mkdir(parents=True, exist_ok=True)
     out_pdb_fn = work_dir / f"{tmp_name}_protein_step1.pdb"
 
-    out_pdb_fn2 = work_dir / f"{tmp_name}_protein_step2.pdb"
-    out_ligand_fn2 = work_dir / f"{tmp_name}_ligand_step2.sdf"
+    out_pdb_fn2 = work_dir / f"{tmp_name}_model_protein.pdb"
+    out_ligand_fn2 = work_dir / f"{tmp_name}_model_ligand.sdf"
     if out_ligand_fn2.exists() and out_pdb_fn2.exists():
         return True
 
@@ -56,7 +57,8 @@ def run_once(
         relax_tool = ProLigRelax(
             prot_mol_h,
             missing_residues=[],
-            platform=f"CPU:{num_threads}",
+            # platform=f"CPU:{num_threads}",
+            platform="CUDA:0",
             ligand_ff="openff",
             charge_name="mmff94",
             is_restrain=(True, "main"),
@@ -86,13 +88,14 @@ def run_once(
     return True
 
 
-def run_batch(pdb_fns, output_dir, num_proc: int = 6):
+def run_batch(pdb_fns, cif_dir, output_dir, num_proc: int = 6):
     residues_tables = load_amber_xml()
     num_threads = int(NUM_CPUS / num_proc)
     with mp.Pool(num_proc) as pool:
         func = partial(
             run_once,
             output_dir=output_dir,
+            cif_dir=cif_dir,
             residues_tables=residues_tables,
             num_threads=num_threads,
         )
@@ -113,6 +116,7 @@ def run_batch(pdb_fns, output_dir, num_proc: int = 6):
     type=str,
     default="{path_to_data}/fabind/posex_self_dock/output",
 )
+@click.option("--cif_dir", type=str)
 @click.option("--output_dir", type=str, default=None)
 @click.option("--num_proc", type=int, default=1)
 def main(**kwargs):
@@ -125,9 +129,9 @@ def main(**kwargs):
         output_dir.mkdir(parents=True, exist_ok=True)
     else:
         output_dir = Path(kwargs["output_dir"])
-    pdb_fns = list(input_dir.glob("*/*.pdb"))
-
-    run_batch(pdb_fns, output_dir, int(kwargs["num_proc"]))
+    cif_dir = Path(kwargs["cif_dir"])
+    pdb_fns = list(input_dir.glob("*/*model_protein.pdb"))
+    run_batch(pdb_fns, cif_dir, output_dir, int(kwargs["num_proc"]))
 
 
 if __name__ == "__main__":

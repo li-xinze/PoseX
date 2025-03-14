@@ -93,7 +93,11 @@ def main(args: argparse.Namespace):
         bust_results = pd.merge(bust_results, df_group_sim, on="GROUP")
         if args.dataset == "posex_cross_dock":
             total_samples = df_group.GROUP.unique().shape[0]
-    bust_results.to_csv(os.path.join(save_folder, f"{args.dataset}_benchmark_result_{args.model_type}.csv"), index=False)
+    if args.relax == "true":
+        res_path = os.path.join(save_folder, f"{args.dataset}_benchmark_result_{args.model_type}_relax.csv")
+    else:
+        res_path = os.path.join(save_folder, f"{args.dataset}_benchmark_result_{args.model_type}.csv")
+    bust_results.to_csv(res_path, index=False)
     if args.dataset in ["posex_self_dock", "posex_cross_dock", "posex_supp"]:
         test_data = bust_results[POSEBUSTER_TEST_COLUMNS].copy()
         bust_results.loc[:, "pb_valid"] = test_data.iloc[:, 1:].all(axis=1)
@@ -122,6 +126,7 @@ if __name__ == "__main__":
     parser.add_argument("--model_output_folder", type=str, required=True, help="Path to the model output folder")
     parser.add_argument("--dataset", type=str, required=True, help="Dataset name")
     parser.add_argument("--model_type", type=str, required=True, help="Model type")
+    parser.add_argument("--relax", type=str, required=True, help="relax mode (true or false)")
     args = parser.parse_args()
 
     main(args)
