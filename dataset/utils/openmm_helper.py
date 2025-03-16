@@ -19,9 +19,6 @@ from openmmforcefields.generators import (
     SMIRNOFFTemplateGenerator,
 )
 from rdkit import Chem
-
-from sys import stdout
-
 from .common_helper import create_logger, temprary_filename
 
 logger = create_logger(__name__)
@@ -119,7 +116,7 @@ class ProLigRelax:
         missing_residues: list = None,
         is_constrain: tuple[bool, str] = (False, "None"),
         is_restrain: tuple[bool, str] = (False, "None"),
-        max_iteration: int = 0,
+        max_iteration: int = 0
     ) -> None:
         self.receptor_ffname = receptor_ff
         self.ligand_ffname = ligand_ff
@@ -142,14 +139,15 @@ class ProLigRelax:
 
         self.receptor_rdmol = protein_mol
         self.receptor_omm = app.PDBFile(
-            StringIO(Chem.MolToPDBBlock(protein_mol).replace("< ", "  "))
+            StringIO(Chem.MolToPDBBlock(protein_mol))
         )
         self.base_forcefield = self._load_rec_forcefield()
+        
         self.missing_residues = missing_residues
         self.is_constrain = is_constrain
         self.is_restrain = is_restrain
         self.max_iteration = max_iteration
-
+        
         self.forcefield_kwargs = {
             "nonbondedMethod": app.CutoffNonPeriodic,
             "nonbondedCutoff": 1.0 * unit.nanometer,  # (default: 1)
@@ -264,7 +262,7 @@ class ProLigRelax:
 
             if level == "all":
                 forces.addParticle(i, model.positions[i])
-            elif level == "main" and atom.name in ["CA", "C", "N", "O"]:
+            elif level == "main" and atom.name in ["CA", "C", "N"]:
                 forces.addParticle(i, model.positions[i])
             elif level == "heavy" and atom.name[0] != "H":
                 forces.addParticle(i, model.positions[i])
@@ -330,7 +328,7 @@ class ProLigRelax:
         )
         min_reporter = MinReporter()
         simulation.minimizeEnergy(
-            maxIterations=self.max_iteration,
+            maxIterations= self.max_iteration,
             # reporter=min_reporter,
             # tolerance=10.0 * unit.kilocalories_per_mole / unit.angstrom,
             # reporter=StateDataReporter(

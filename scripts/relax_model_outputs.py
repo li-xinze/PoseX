@@ -114,7 +114,7 @@ def run_batch(pdb_fns, cif_dir, output_dir, num_proc: int = 6):
 @click.option(
     "--input_dir",
     type=str,
-    default="/Users/josephxu/PycharmProjects/debug_iip_code/protein_ligand_docking_benchmark/relax_debug/output",
+    default="{path_to_data}/fabind/posex_self_dock/output",
 )
 @click.option("--cif_dir", type=str)
 @click.option("--output_dir", type=str, default=None)

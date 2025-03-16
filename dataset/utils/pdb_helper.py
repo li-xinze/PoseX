@@ -210,14 +210,17 @@ def add_h_to_receptor_mol(rec_mol: Chem.Mol, hydrogen_table: Dict[str, List[str]
         atom: Chem.Atom
         if atom.GetAtomicNum() != 1:
             mi = atom.GetPDBResidueInfo()
-            res_key = [mi.GetResidueName(), int(mi.GetResidueNumber()), mi.GetChainId(), mi.GetInsertionCode()]
+            res_key = [mi.GetResidueName(), int(mi.GetResidueNumber()), mi.GetChainId()]
             atom_name = mi.GetName().strip()
 
             tmp_mi = Chem.AtomPDBResidueInfo()
             tmp_mi.SetResidueName(f"{res_key[0]:>3s}")
             tmp_mi.SetResidueNumber(res_key[1])
             tmp_mi.SetChainId(res_key[2])
-            tmp_mi.SetInsertionCode(res_key[3])
+            if mi.GetInsertionCode() == " ":
+                tmp_mi.SetInsertionCode(" ")
+            else:
+                tmp_mi.SetInsertionCode(mi.GetInsertionCode())
 
             if tuple(res_key) not in residue_mapper:
                 residue_mapper[tuple(res_key)] = []

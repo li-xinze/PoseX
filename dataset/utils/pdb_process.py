@@ -1,13 +1,11 @@
 from collections import defaultdict
 from io import StringIO
-from math import e
 from pathlib import Path
 
 import numpy as np
 import openmm.app as app
 from openmm.app.element import hydrogen
-from openmm.app.internal.pdbx.reader.PdbxReader import PdbxReader
-from pdbfixer.pdbfixer import PDBFixer, Sequence, substitutions
+from pdbfixer.pdbfixer import PDBFixer, substitutions
 from rdkit import Chem
 
 from .pdb_helper import (
@@ -23,69 +21,6 @@ substitutions["OTY"] = "TYR"
 substitutions["4AF"] = "ALA"
 substitutions["SNN"] = "ASN"
 substitutions["HP9"] = "PHE"
-
-
-def get_sequences_info(cif_fn: Path):
-    with open(cif_fn, "r") as file:
-        reader = PdbxReader(file)
-        data = []
-        reader.read(data)
-        block = data[0]
-
-    # Load the sequence data.
-
-    sequenceData = block.getObj("pdbx_poly_seq_scheme")
-    sequences = {}
-    nan_sequences = {}
-
-    if sequenceData is not None:
-        entityIdCol = sequenceData.getAttributeIndex("entity_id")
-        residueCol = sequenceData.getAttributeIndex("mon_id")
-        authresCol = sequenceData.getAttributeIndex("auth_mon_id")
-        for row in sequenceData.getRowList():
-            entityId = row[entityIdCol]
-            residue = row[residueCol]
-            auth_residue = row[authresCol]
-            if entityId not in sequences:
-                sequences[entityId] = []
-                nan_sequences[entityId] = []
-            sequences[entityId].append(residue)
-            nan_sequences[entityId].append(
-                None if auth_residue == "?" else auth_residue
-            )
-
-    atomsiteData = block.getObj("atom_site")
-    visited_chains = set()
-    complete_sequences = []
-    uncomplete_sequences = []
-    if atomsiteData is not None:
-        # label_asymIdCol = atomsiteData.getAttributeIndex('label_asym_id')
-        auth_asymIdCol = atomsiteData.getAttributeIndex("auth_asym_id")
-        entityIdCol = atomsiteData.getAttributeIndex("label_entity_id")
-        for row in atomsiteData.getRowList():
-            asymId = row[auth_asymIdCol]
-            entityId = row[entityIdCol]
-            if (entityId in sequences) and (asymId not in visited_chains):
-                complete_sequences.append(Sequence(asymId, sequences[entityId]))
-                uncomplete_sequences.append(Sequence(asymId, nan_sequences[entityId]))
-                visited_chains.add(asymId)
-
-    return complete_sequences, uncomplete_sequences
-
-
-def trim_none(lst):
-    if not lst:  # 空列表直接返回
-        return []
-    # 正向找第一个非None
-    start = 0
-    while start < len(lst) and lst[start] is None:
-        start += 1
-    # 反向找最后一个非None
-    end = len(lst) - 1
-    while end >= 0 and lst[end] is None:
-        end -= 1
-    # 切片截取有效区间（注意end+1）
-    return lst[start : end + 1] if start <= end else []
 
 
 class PDBFixerWrapper(PDBFixer):
@@ -197,7 +132,7 @@ class PDBFixerWrapper(PDBFixer):
         Find nonstandard residues.
 
         >>> fixer = PDBFixer(pdbid='1VII')
-        >>> fixer.applyMutations(["ALA:57 :GLY"], "A")
+        >>> fixer.applyMutations(["ALA:57:GLY"], "A")
         >>> fixer.findMissingResidues()
         >>> fixer.findMissingAtoms()
         >>> fixer.addMissingAtoms()
@@ -212,9 +147,7 @@ class PDBFixerWrapper(PDBFixer):
         for chain in self.topology.chains():
             if chain.id == chain_id:
                 for residue in chain.residues():
-                    resSeq_to_residue[f"{int(residue.id)}{residue.insertionCode}"] = (
-                        residue
-                    )
+                    resSeq_to_residue[int(residue.id)] = residue
 
         # Make a map of residues to mutate based on requested mutation list.
         residue_map = (
@@ -222,6 +155,7 @@ class PDBFixerWrapper(PDBFixer):
         )  # residue_map[residue] is the name of the new residue to mutate to, if a mutation is desired
         for mut_str in mutations:
             old_name, resSeq, new_name = mut_str.split(":")
+            resSeq = int(resSeq)
 
             if resSeq not in resSeq_to_residue:
                 raise (
@@ -277,68 +211,6 @@ class PDBFixerWrapper(PDBFixer):
             self.topology = modeller.topology
             self.positions = modeller.positions
 
-    def findMissingResidues(self, uncomplete_seq):
-        chains = [c for c in self.topology.chains() if len(list(c.residues())) > 0]
-        chainWithGaps = {}
-
-        # Find the sequence of each chain, with gaps for missing residues.
-        visited_chainids = set()
-        for chain in chains:
-            for sequence in uncomplete_seq:
-                if chain.id == sequence.chainId:
-                    if chain.id not in visited_chainids:
-                        chainWithGaps[chain] = trim_none(sequence.residues)
-                        visited_chainids.add(chain.id)
-
-        # Try to find the chain that matches each sequence.
-        chainSequence = {}
-        chainOffset = {}
-        for sequence in self.sequences:
-            for chain in chains:
-                if chain.id != sequence.chainId:
-                    continue
-                if chain in chainSequence:
-                    continue
-                for offset in range(
-                    len(sequence.residues) - len(chainWithGaps[chain]) + 1
-                ):
-                    if all(
-                        a == b or b == None
-                        for a, b in zip(
-                            sequence.residues[offset:], chainWithGaps[chain]
-                        )
-                    ):
-                        chainSequence[chain] = sequence
-                        chainOffset[chain] = offset
-                        break
-                if chain in chainSequence:
-                    break
-
-        # Now build the list of residues to add.
-
-        self.missingResidues = {}
-        for chain in self.topology.chains():
-            if chain in chainSequence:
-                offset = chainOffset[chain]
-                sequence = chainSequence[chain].residues
-                gappedSequence = chainWithGaps[chain]
-                index = 0
-                for i in range(len(sequence)):
-                    if (
-                        i < offset
-                        or i >= len(gappedSequence) + offset
-                        or gappedSequence[i - offset] is None
-                    ):
-                        key = (chain.index, index)
-                        if key not in self.missingResidues:
-                            self.missingResidues[key] = []
-                        residueName = sequence[i]
-                        if residueName in substitutions:
-                            residueName = substitutions[sequence[i]]
-                        self.missingResidues[key].append(residueName)
-                    else:
-                        index += 1
-
 
 def assign_chains(fixer: PDBFixerWrapper):
     protein_chains_idxs = {}
@@ -384,17 +256,17 @@ def pdb_to_fixer(pdb_fn, cif_fn=None):
     ) = assign_chains(fixer)
     fixer.removeChains(chainIndices=other_chains_idxs)
 
-    # 将首尾变成ACE/NME
+    # 将收尾突变成
     chain_mutations = defaultdict(list)
     not_same_chain_idxs = []
     for chain in fixer.topology.chains():
-        if chain.id in protein_chain_idxs.values():
+        if len(chain._residues) >= 50 and chain.id in protein_chain_idxs.values():
             start_residue, end_residue = None, None
             for residue in chain._residues[:10]:
                 if residue.name in PROTEIN_RESIDUES:
                     start_residue = residue
                     chain_mutations[chain.id].append(
-                        f"{start_residue.name}:{start_residue.id}{start_residue.insertionCode}:ACE"
+                        f"{start_residue.name}:{start_residue.id}:ACE"
                     )
                     break
 
@@ -402,24 +274,22 @@ def pdb_to_fixer(pdb_fn, cif_fn=None):
                 if residue.name in PROTEIN_RESIDUES:
                     end_residue = residue
                     chain_mutations[chain.id].append(
-                        f"{end_residue.name}:{end_residue.id}{end_residue.insertionCode}:NME"
+                        f"{end_residue.name}:{end_residue.id}:NME"
                     )
                     break
+            chain_len1 = len(
+                [res for res in chain._residues if res.insertionCode == " "]
+            )
+            chain_len2 = int(end_residue.id) - int(start_residue.id) + 1
+            if chain_len1 != chain_len2:
+                not_same_chain_idxs.append(chain.id)
 
-            if (start_residue is not None) or (end_residue is not None):
-                chain_len1 = len(
-                    [res for res in chain._residues if res.insertionCode == " "]
-                )
-                chain_len2 = int(end_residue.id) - int(start_residue.id) + 1
-
-                if chain_len1 != chain_len2:
-                    not_same_chain_idxs.append(chain.id)
-
-    uncomplete_seqs = []
     if len(not_same_chain_idxs) > 0:
-        complete_sequences, uncomplete_sequences = get_sequences_info(cif_fn)
-        complete_seqs = []
-        for sequence, nan_sequence in zip(complete_sequences, uncomplete_sequences):
+        with open(cif_fn, "r") as f:
+            fixer_cif = PDBFixerWrapper(pdbxfile=f)
+
+        cur_seqs = []
+        for sequence in fixer_cif.sequences:
             if sequence.chainId in not_same_chain_idxs:
                 if len(std_residues_mapping) > 0:
                     new_residues = [
@@ -427,19 +297,11 @@ def pdb_to_fixer(pdb_fn, cif_fn=None):
                         for x in sequence.residues
                     ]
                     sequence.residues = new_residues
+                cur_seqs.append(sequence)
+        fixer.sequences = cur_seqs
 
-                    new_residues1 = [
-                        std_residues_mapping[x] if x in std_residues_mapping else x
-                        for x in nan_sequence.residues
-                    ]
-                    nan_sequence.residues = new_residues1
-                complete_seqs.append(sequence)
-                uncomplete_seqs.append(nan_sequence)
-        fixer.sequences = complete_seqs
-
-    fixer.findMissingResidues(uncomplete_seqs)
+    fixer.findMissingResidues()
     print(f"{fixer.missingResidues=}")
-
     print(f"Remove end missing residues, and it seems to be not necessary...")
     to_delete_keys = set()
     for key, values in fixer.missingResidues.items():
@@ -496,11 +358,7 @@ def fixer_into_protein_mol(fixer: PDBFixer, residue_tables):
                 atom.residue.chain.id,
                 atom.name,
                 atom.index,
-                atom.residue.insertionCode,
             ]
-            # if int(key[1])>=60 and int(key[1])<=65:
-            #     print(key)
-
             if key[3] in ["OXT"]:
                 continue
             if tuple(key[:3]) not in residue_records and key[0] not in ["ACE"]:
@@ -624,7 +482,6 @@ def fixer_into_protein_mol(fixer: PDBFixer, residue_tables):
 
 
 def protein_mol_to_file(protein_mol: Chem.Mol, out_fn: str | Path = None):
-    # Chem.MolToPDBFile(protein_mol, "debug.pdb")
     receptor_omm = app.PDBFile(StringIO(Chem.MolToPDBBlock(protein_mol)))
     if out_fn is not None:
         with open(out_fn, "w") as f:
