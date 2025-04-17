@@ -334,8 +334,8 @@ def run_structure_alignment_v2(predicted_protein_pdb: str, predicted_ligand_sdf:
     Returns:
         float: Best aligned RMSD
     """
+    print(predicted_ligand_sdf)
     best_aligned_rmsd = np.inf
-
     reference_ligands = Chem.SDMolSupplier(reference_ligands_sdf, sanitize=False, removeHs=True)
     for reference_ligand in reference_ligands:
         # Save reference ligand to temporary folder
@@ -368,17 +368,6 @@ def run_structure_alignment_v2(predicted_protein_pdb: str, predicted_ligand_sdf:
             stored.pred_coords = []
             cmd.iterate_state(1, "predicted_ligand", "stored.pred_coords.append((x, y, z))")
             predicted_ligand = Chem.MolFromMolFile(predicted_ligand_sdf)
-
-            # Cannot kekulie
-            if not predicted_ligand:
-                no_sanitize_mol = Chem.MolFromMolFile(predicted_ligand_sdf, sanitize=False)
-                no_sanitize_mol_conf = no_sanitize_mol.GetConformer()
-                predicted_ligand = Chem.Mol(reference_ligand)
-                predicted_ligand_conformer = predicted_ligand.GetConformer()
-                for atom_idx in range(no_sanitize_mol_conf.GetNumAtoms()):
-                    pos = predicted_ligand_conformer.GetAtomPosition(atom_idx)
-                    predicted_ligand_conformer.SetAtomPosition(atom_idx, pos)
-
             predicted_ligand_conformer = predicted_ligand.GetConformer()
             for i, pred_coord in enumerate(stored.pred_coords):
                 x, y, z = pred_coord

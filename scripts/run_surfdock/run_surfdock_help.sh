@@ -1,6 +1,6 @@
 #!/bin/bash
 
-
+start_time=$(date +%s)
 # This script is used to run SurfDock on test samples
 path=$(readlink -f "$0")
 INPUT_DIR="$1"
@@ -18,14 +18,14 @@ model_temp="/SurfDock"
 #------------------------------------------------------------------------------------------------#
 echo '------------------------------------ Step1 : Setup Params --------------------------------------'
 export precomputed_arrays="${temp}/precomputed/precomputed_arrays"
-gpu_string="0"
+gpu_string="1"
 echo "Using GPU devices: ${gpu_string}"
 IFS=',' read -ra gpu_array <<< "$gpu_string"
 NUM_GPUS=${#gpu_array[@]}
 export CUDA_VISIBLE_DEVICES=${gpu_string}
 
 main_process_port=2951${gpu_array[-1]}
-project_name='SurfDock_eval_samples/repeat_cross'
+project_name='SurfDock_eval_samples/repeat_astex'
 surface_out_dir=${SurfDockdir}/data/eval_sample_dirs/${project_name}/test_samples_8A_surface
 data_dir=${INPUT_DIR}
 out_csv_file=${SurfDockdir}/data/eval_sample_dirs/${project_name}/input_csv_files/test_samples.csv
@@ -141,3 +141,6 @@ ${SurfDockdir}/inference_accelerate.py \
 --wandb_dir ${temp}/docking_result/test_workdir`
 state=$command
 done
+end_time=$(date +%s)
+cost_time=$[ $end_time-$start_time ]
+echo "Running time : ${cost_time}"

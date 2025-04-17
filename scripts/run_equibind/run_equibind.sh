@@ -9,8 +9,7 @@ if [ $# -eq 0 ]; then
 fi
 
 DATASET="$1"
-#INTERFORMER_EXEC_FOLDER="path/to/equibind"
-EQUIBIND_EXEC_FOLDER="/home/hanj/Docking/EquiBind/"
+EQUIBIND_EXEC_FOLDER="path/to/equibind"
 EQUIBIND_INPUT_FOLDER="${PWD}/data/benchmark/${DATASET}/equibind/input"
 EQUIBIND_OUTPUT_FOLDER="${PWD}/data/benchmark/${DATASET}/equibind/output"
 
@@ -18,10 +17,12 @@ EQUIBIND_OUTPUT_FOLDER="${PWD}/data/benchmark/${DATASET}/equibind/output"
 eval "$(conda shell.bash hook)"
 conda activate equibind
 
+start_time=$(date +%s)
 python scripts/run_equibind/run_equibind.py \
     --input_dir ${EQUIBIND_INPUT_FOLDER} \
     --output_dir ${EQUIBIND_OUTPUT_FOLDER} \
     --equibind_exec_dir ${EQUIBIND_EXEC_FOLDER} \
     --yml_path "configs_clean/inference.yml"
-
-#conda activate microcyto
+end_time=$(date +%s)
+cost_time=$[ $end_time-$start_time ]
+echo "Running time for ${DATASET}: ${cost_time}"

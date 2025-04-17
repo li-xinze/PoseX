@@ -9,8 +9,7 @@ if [ $# -eq 0 ]; then
 fi
 
 DATASET="$1"
-#INTERFORMER_EXEC_FOLDER="path/to/interformer"
-INTERFORMER_EXEC_FOLDER="/home/hanj/Docking/Interformer/"
+INTERFORMER_EXEC_FOLDER="path/to/interformer"
 INTERFORMER_INPUT_FOLDER="${PWD}/data/benchmark/${DATASET}/interformer/input"
 INTERFORMER_OUTPUT_FOLDER="${PWD}/data/benchmark/${DATASET}/interformer/output"
 
@@ -18,9 +17,13 @@ INTERFORMER_OUTPUT_FOLDER="${PWD}/data/benchmark/${DATASET}/interformer/output"
 eval "$(conda shell.bash hook)"
 conda activate interformer
 
+export CUDA_VISIBLE_DEVICES="1"
+
+start_time=$(date +%s)
 python scripts/run_interformer/run_interformer.py \
     --input_dir ${INTERFORMER_INPUT_FOLDER} \
     --output_dir ${INTERFORMER_OUTPUT_FOLDER} \
-    --interformer_exec_dir ${INTERFORMER_EXEC_FOLDER} \
-
-#conda activate microcyto
+    --interformer_exec_dir ${INTERFORMER_EXEC_FOLDER}
+end_time=$(date +%s)
+cost_time=$[ $end_time-$start_time ]
+echo "Running time for ${DATASET}: ${cost_time}"

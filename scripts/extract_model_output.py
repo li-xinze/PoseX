@@ -58,9 +58,10 @@ def assign_ligand_pdb_to_sdf(model_output_folder: str, pdb_ccd_id: str, sdf_mol:
     Returns:
         bool: Whether the conversion is successful
     """
-    pdb_mol = Chem.MolFromPDBFile(os.path.join(model_output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.pdb"), sanitize=False)
+    pdb_mol = Chem.MolFromPDBFile(os.path.join(model_output_folder, f"{pdb_ccd_id}/{pdb_ccd_id}_model_ligand.pdb"),
+                                  sanitize=False)
     mol = copy.deepcopy(sdf_mol)
-    try: 
+    try:
         for atom in pdb_mol.GetAtoms():
             atom_idx = atom.GetIdx()
             assert atom.GetAtomicNum() == mol.GetAtomWithIdx(atom_idx).GetAtomicNum()
@@ -446,10 +447,31 @@ def extract_unimol_output(args: argparse.Namespace):
 
         output_pdb_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_protein.pdb")
         input_sdf_path = os.path.join(output_dir, "ligand_predict.sdf")
+        reference_ligand_sdf = os.path.join(os.path.dirname(args.output_folder), "input", pdb_ccd_id,
+                                            f"{pdb_ccd_id}_ligand_start_conf.sdf")
+
+        predicted_ligand = Chem.MolFromMolFile(input_sdf_path)
+        reference_ligand = Chem.SDMolSupplier(reference_ligand_sdf, sanitize=False, removeHs=True)[0]
+
+        # For molecules cannot kekulie
+        if not predicted_ligand:
+            no_sanitize_mol = Chem.MolFromMolFile(input_sdf_path, sanitize=False)
+            no_sanitize_mol_conf = no_sanitize_mol.GetConformer()
+
+            predicted_ligand_ = Chem.Mol(reference_ligand)
+            predicted_ligand_ = Chem.RemoveHs(predicted_ligand_)
+            predicted_ligand_.RemoveAllConformers()
+            conf = Chem.Conformer(no_sanitize_mol_conf)
+            predicted_ligand_.AddConformer(conf)
         output_sdf_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_ligand.sdf")
+
         try:
             shutil.copy(row["PROTEIN_PDB_PATH"], output_pdb_path)
-            shutil.copy(input_sdf_path, output_sdf_path)
+            if not predicted_ligand:
+                writer = Chem.SDWriter(output_sdf_path)
+                writer.write(predicted_ligand_)
+            else:
+                shutil.copy(input_sdf_path, output_sdf_path)
         except Exception as e:
             error_process_ligand_ids.append(pdb_ccd_id)
             print(f"Error processing ligand for {pdb_ccd_id}: {e}")
@@ -507,7 +529,6 @@ def extract_equibind_output(args: argparse.Namespace):
             writer = Chem.SDWriter(output_sdf_path)
             writer.write(mol, confId=0)
             shutil.copy(row["PROTEIN_PDB_PATH"], output_pdb_path)
-            # shutil.copy(input_sdf_path, output_sdf_path)
         except Exception as e:
             error_process_ligand_ids.append(pdb_ccd_id)
             print(f"Error processing ligand for {pdb_ccd_id}: {e}")
@@ -605,6 +626,47 @@ def extract_surfdock_output(args: argparse.Namespace):
     print(f"Error Process Ligand IDs: {error_process_ligand_ids}")
 
 
+def extract_diffdock_pocket_output(args: argparse.Namespace):
+    docking_data = pd.read_csv(args.input_file)
+    print("Number of Posebusters Data: ", len(docking_data))
+    error_process_ligand_ids = []
+    diffdock_output_dir = os.path.join(args.output_folder, "results")
+    for _, row in docking_data.iterrows():
+        print(f"Processing {row['PDB_CCD_ID']}")
+        pdb_ccd_id = row["PDB_CCD_ID"]
+        output_dir = os.path.join(args.output_folder, pdb_ccd_id)
+        os.makedirs(output_dir, exist_ok=True)
+
+        matched_dir = ""
+        found = 0
+        for matched_dir in os.listdir(diffdock_output_dir):
+            if pdb_ccd_id in matched_dir:
+                found = 1
+                break
+        if found == 0:
+            error_process_ligand_ids.append(pdb_ccd_id)
+            print(f"Error processing ligand for {pdb_ccd_id}")
+            continue
+
+        input_sdf_path = os.path.join(diffdock_output_dir, matched_dir, "rank1.sdf")
+        input_pdb_path = os.path.join(diffdock_output_dir, matched_dir, "rank1_protein.pdb")
+        if os.stat(input_pdb_path).st_size == 0:
+            error_process_ligand_ids.append(pdb_ccd_id)
+            print(f"Error processing protein for {pdb_ccd_id}")
+            continue
+        output_pdb_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_protein.pdb")
+        output_sdf_path = os.path.join(output_dir, f"{pdb_ccd_id}_model_ligand.sdf")
+        try:
+            shutil.copy(input_sdf_path, output_sdf_path)
+            shutil.copy(input_pdb_path, output_pdb_path)
+        except Exception as e:
+            error_process_ligand_ids.append(pdb_ccd_id)
+            print(f"Error processing ligand for {pdb_ccd_id}: {e}")
+
+    print(f"Number of Error Process Ligand IDs: {len(error_process_ligand_ids)}")
+    print(f"Error Process Ligand IDs: {error_process_ligand_ids}")
+
+
 def main(args: argparse.Namespace):
     if args.model_type == "alphafold3":
         extract_alphafold3_output(args)
@@ -638,6 +700,8 @@ def main(args: argparse.Namespace):
         extract_protenix_output(args)
     elif args.model_type == "surfdock":
         extract_surfdock_output(args)
+    elif args.model_type == "diffdock_pocket":
+        extract_diffdock_pocket_output(args)
     else:
         raise ValueError(f"Unsupported model type: {args.model_type}")
 

@@ -202,7 +202,6 @@ def generate_deepdock_input(args: argparse.Namespace):
         protein_path = row["PROTEIN_PDB_PATH"]
         ligand_path = row["LIGAND_SDF_PATH"]
         task_dir = os.path.join(args.output_folder, task_name)
-        # TODO: temp
         crystal_ligand_path = os.path.join(os.path.dirname(ligand_path), f"{task_name}_ligand.sdf")
 
         os.makedirs(task_dir, exist_ok=True)
@@ -232,7 +231,6 @@ def generate_neuralplexer_input(args: argparse.Namespace):
         ligand_path = row["LIGAND_SDF_PATH"]
         task_dir = os.path.join(args.output_folder, task_name)
         os.makedirs(task_dir, exist_ok=True)
-        # shutil.copy(protein_path, task_dir)
         remove_insertion_code(protein_path, task_dir)
         shutil.copy(ligand_path, task_dir)
 
@@ -288,7 +286,6 @@ def generate_unimol_input(args: argparse.Namespace):
         protein_path = row["PROTEIN_PDB_PATH"]
         ligand_path = row["LIGAND_SDF_PATH"]
         task_dir = os.path.join(args.output_folder, task_name)
-        # TODO: temp
         crystal_ligand_path = os.path.join(os.path.dirname(ligand_path), f"{task_name}_ligand.sdf")
         calculated_docking_grid_sdf(crystal_ligand_path, task_dir, task_name)
         shutil.copy(protein_path, task_dir)
@@ -328,11 +325,6 @@ def generate_equibind_input(args: argparse.Namespace):
 def generate_protenix_input(args: argparse.Namespace):
     """Generate Protenix input for a given docking data."""
 
-    # TODO: remove
-    # uniprot_path = os.path.join(args.output_folder, "database/uniprot_all_2021_04.fa")
-    # mgy_path = os.path.join(args.output_folder, "database/mgy_clusters_2022_05.fa")
-    uniprot_path = "/home/hanj/af_running/database/uniprot_all_2021_04.fa"
-    mgy_path = "/home/hanj/af_running/database/mgy_clusters_2022_05.fa"
     docking_data = pd.read_csv(args.input_file)
     for data_idx, row in tqdm(docking_data.iterrows(), total=len(docking_data)):
         task_name = row["PDB_CCD_ID"]
@@ -382,6 +374,37 @@ def generate_surfdock_input(args: argparse.Namespace):
         shutil.copy(crystal_ligand_path, task_dir)
 
 
+def generate_diffdock_pocket_input(args: argparse.Namespace):
+    """Generate DiffDock_Pocket input for a given docking data."""
+
+    docking_data = pd.read_csv(args.input_file)
+    head = ["complex_name", "experimental_protein", "ligand", "pocket_center_x", "pocket_center_y", "pocket_center_z",
+            "flexible_sidechains"]
+    data = [head]
+    for data_idx, row in tqdm(docking_data.iterrows(), total=len(docking_data)):
+        task_name = row["PDB_CCD_ID"]
+        protein_path = row["PROTEIN_PDB_PATH"]
+        ligand_path = row["LIGAND_SDF_PATH"]
+        crystal_ligand_path = os.path.join(os.path.dirname(ligand_path), f"{task_name}_ligand.sdf")
+        task_dir = os.path.join(args.output_folder, task_name)
+        os.makedirs(task_dir, exist_ok=True)
+        with open(protein_path) as f:
+            lines = f.readlines()
+        with open(os.path.join(task_dir, os.path.basename(protein_path)), "w") as fw:
+            for line in lines:
+                if not line.startswith("HETATM"):
+                    fw.write(line)
+        shutil.copy(crystal_ligand_path, task_dir)
+
+        output_protein_path = os.path.join(task_dir, f"{task_name}_protein.pdb")
+        output_ligand_path = os.path.join(task_dir, f"{task_name}_ligand.sdf")
+        data.append(
+            [task_name, os.path.abspath(output_protein_path), os.path.abspath(output_ligand_path), "", "", "", ""])
+        with open(f"{args.output_folder}/example.csv", "w", newline='') as f:
+            writer = csv.writer(f)
+            writer.writerows(data)
+
+
 def main(args: argparse.Namespace):
     os.makedirs(args.output_folder, exist_ok=True)
     print(f"Saving {args.model_type} input to {args.output_folder}")
@@ -418,6 +441,8 @@ def main(args: argparse.Namespace):
         generate_protenix_input(args)
     elif args.model_type == "surfdock":
         generate_surfdock_input(args)
+    elif args.model_type == "diffdock_pocket":
+        generate_diffdock_pocket_input(args)
     else:
         raise ValueError(f"Unsupported model type: {args.model_type}")
 

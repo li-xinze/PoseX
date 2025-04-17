@@ -29,11 +29,12 @@ for subdir in $DEEPDOCK_INPUT_FOLDER/*; do
     obabel $sdf_file -O $output_file
 done
 
-# Enable gpu may cause error for unknown reason
+start_time=$(date +%s)
 docker run -it \
     -v $DEEPDOCK_INPUT_FOLDER:/DeepDock/eval \
     -v $DEEPDOCK_RUNNING_FOLDER:/DeepDock/run \
     omendezlucio/deepdock \
     python DeepDock/run/run_deepdock.py --input_folder /DeepDock/eval
-
-#conda activate microcyto
+end_time=$(date +%s)
+cost_time=$[ $end_time-$start_time ]
+echo "Running time for ${DATASET}: ${cost_time}"

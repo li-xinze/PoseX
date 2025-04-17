@@ -4,9 +4,6 @@ import argparse
 
 def main(args: argparse.Namespace):
     for pdb_ccd in os.listdir(args.input_folder):
-        # if not pdb_ccd in ['7ZXS_KBO', '8RZH_A1H38', '7FE1_5II', '7OP9_06K', '5SCC_FBP', '8J6N_TVJ', '9GGJ_FUM',
-        #                    '8CFZ_A1H8H']:
-        #     continue
         pdb_ccd_dir = os.path.join(args.input_folder, pdb_ccd)
         protein_path = os.path.join(pdb_ccd_dir, f"{pdb_ccd}_protein.pdb")
         ligand_path = os.path.join(pdb_ccd_dir, f"{pdb_ccd}_ligand_start_conf.sdf")

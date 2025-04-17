@@ -8,5 +8,4 @@ dependencies:
   - biotite
   - pdbfixer
   - ambertools
-  - rdkit
   - click

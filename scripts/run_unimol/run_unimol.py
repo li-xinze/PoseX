@@ -2,6 +2,7 @@ import os
 import argparse
 
 
+
 def main(args: argparse.Namespace):
     os.chdir(os.path.join(args.unimol_exec_dir, "interface"))
     for pdb_ccd in os.listdir(args.input_dir):
