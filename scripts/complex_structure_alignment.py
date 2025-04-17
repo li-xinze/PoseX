@@ -334,7 +334,6 @@ def run_structure_alignment_v2(predicted_protein_pdb: str, predicted_ligand_sdf:
     Returns:
         float: Best aligned RMSD
     """
-    print(predicted_ligand_sdf)
     best_aligned_rmsd = np.inf
     reference_ligands = Chem.SDMolSupplier(reference_ligands_sdf, sanitize=False, removeHs=True)
     for reference_ligand in reference_ligands:
