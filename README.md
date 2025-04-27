@@ -14,7 +14,7 @@ PoseX is a comprehensive benchmark dataset designed to evaluate molecular dockin
   - [Installation](#installation)
   - [Benchmark Data](#benchmark-data)
   - [Benchmark Pipeline](#benchmark-pipeline)
-    - [1. Generate Benchmark Dataset](#1-generate-benchmark-dataset)
+    - [1. Generate Benchmark CSV Data](#1-generate-benchmark-csv-data)
     - [2. Convert to Model Inputs](#2-convert-to-model-inputs)
     - [3. Run Docking Models](#3-run-docking-models)
     - [4. Extract Model Outputs](#4-extract-model-outputs)
@@ -30,6 +30,7 @@ PoseX is a comprehensive benchmark dataset designed to evaluate molecular dockin
 Install PoseX directly from Github to get the latest updates.
 ```bash
 git clone https://github.com/CataAI/PoseX.git
+cd PoseX
 ```
 We recommend using `mamba` to manage the Python environment. For more information on how to install mamba, see [Miniforge](https://github.com/conda-forge/miniforge).
 Once `mamba` is installed, we can run the following command to install the basic environment.
@@ -40,7 +41,7 @@ mamba activate posex
 For a specific molecular docking tool, we can use the corresponding environment file in the `environments` folder. Take `Chai-1` as an example:
 
 ```bash
-pip install -r environments/chai.txt
+pip install -r environments/chai-1.txt
 ```
 
 ## Benchmark Data
@@ -49,20 +50,28 @@ For information about creating a dataset from scratch, please refer to the data 
 ## Benchmark Pipeline
 
 This project provides a complete pipeline for:
-- Generating benchmark datasets from PoseX and Astex
-- Converting data into model-specific input formats
-- Running different docking models
+- Generate the csv file required for the benchmark based on the `PoseX` dataset
+- Converting docking data into model-specific input formats
+- Running different docking models or tools
 - Energy minimization of molecular docking results
 - Extracting and aligning model outputs
-- Calculating evaluation metrics using PoseBusters
+- Calculating evaluation metrics using `PoseBusters`
 
 
-### 1. Generate Benchmark Dataset
+### 1. Generate Benchmark CSV Data
 
 Generate benchmark CSV files containing protein sequences, ligand SMILES, and other metadata:
 
 ```bash
 bash ./scripts/generate_docking_benchmark.sh <dataset>
+
+# --------------- Example --------------- #
+# Astex
+bash ./scripts/generate_docking_benchmark.sh astex
+# PoseX Self-Docking
+bash ./scripts/generate_docking_benchmark.sh posex_self_dock
+# PoseX Cross-Docking
+bash ./scripts/generate_docking_benchmark.sh posex_cross_dock
 ```
 
 ### 2. Convert to Model Inputs
@@ -71,15 +80,22 @@ Convert benchmark CSV files to model-specific input formats:
 
 ```bash
 bash ./scripts/convert_to_model_input.sh <dataset> <model_type>
+
+# --------------- Example --------------- #
+# PoseX Self-Docking (AlphaFold3)
+bash ./scripts/convert_to_model_input.sh posex_self_dock alphafold3
 ```
 
 ### 3. Run Docking Models
 
 Run different docking models:
 
-For example, run Boltz-1:
 ```bash
-bash ./scripts/run_boltz/run_boltz.sh <dataset>
+bash ./scripts/run_<model_type>/run_<model_type>.sh <dataset>
+
+# --------------- Example --------------- #
+# PoseX Self-Docking (Alphafold3)
+bash ./scripts/run_alphafold3/run_alphafold3.sh posex_self_dock
 ```
 
 ### 4. Extract Model Outputs
@@ -88,11 +104,15 @@ Extract predicted structures from model outputs:
 
 ```bash
 bash ./scripts/extract_model_output.sh <dataset> <model_type>
+
+# --------------- Example --------------- #
+# PoseX Self-Docking (AlphaFold3)
+bash ./scripts/extract_model_output.sh posex_self_dock alphafold3
 ```
 
 ### 5. Energy Minimization
 
-```
+```bash
 python -m scripts.relax_model_outputs --input_dir <input_dir> --cif_dir <cif_dir>
 ```
 
@@ -102,6 +122,10 @@ Align predicted structures to the reference structures:
 
 ```bash
 bash ./scripts/complex_structure_alignment.sh <dataset> <model_type> <relax_mode>
+
+# --------------- Example --------------- #
+# PoseX Self-Docking (AlphaFold3) (Using Relax)
+bash ./scripts/complex_structure_alignment.sh posex_self_dock alphafold3 true
 ```
 
 ### 7. Calculate Benchmark Result
@@ -110,6 +134,10 @@ Calculate evaluation metrics using PoseBusters:
 
 ```bash
 bash ./scripts/calculate_benchmark_result.sh <dataset> <model_type> <relax_mode>
+
+# --------------- Example --------------- #
+# PoseX Self-Docking (AlphaFold3) (Using Relax)
+bash ./scripts/calculate_benchmark_result.sh posex_self_dock alphafold3 true
 ```
 
 ## Acknowledgements
