@@ -672,7 +672,7 @@ def main(args: argparse.Namespace):
         extract_alphafold3_output(args)
     elif args.model_type == "chai":
         extract_chai_output(args)
-    elif args.model_type == "boltz":
+    elif args.model_type in ["boltz", "boltz1x"]:
         extract_boltz_output(args)
     elif args.model_type == "rfaa":
         extract_rfaa_output(args)
