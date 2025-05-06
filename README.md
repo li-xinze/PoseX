@@ -23,7 +23,7 @@ PoseX is a comprehensive benchmark dataset designed to evaluate molecular dockin
     - [7. Calculate Benchmark Result](#7-calculate-benchmark-result)
   - [Acknowledgements](#acknowledgements)
   - [License](#license)
-  - [Cite](#cite)
+  - [Citations](#citations)
 
 ## Installation
 
@@ -148,10 +148,11 @@ bash ./scripts/calculate_benchmark_result.sh posex_self_dock alphafold3 true
 
 
 
-## Cite
+## Citations
 
 If you are interested in our work or use our data and code, please cite the following article:
-```
+
+```bibtex
 @inproceedings{jiang2025posexaidefeatsphysics,
       title={PoseX: AI Defeats Physics Approaches on Protein-Ligand Cross Docking}, 
       author={Yize Jiang and Xinze Li and Yuanyuan Zhang and Jin Han and Youjun Xu and Ayush Pandit and Zaixi Zhang and Mengdi Wang and Mengyang Wang and Chong Liu and Guang Yang and Yejin Choi and Wu-Jun Li and Tianfan Fu and Fang Wu and Junhong Liu},
