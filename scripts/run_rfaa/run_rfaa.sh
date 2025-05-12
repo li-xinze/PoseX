@@ -37,4 +37,4 @@ for yaml_file in ${RFAA_INPUT_FOLDER}/*.yaml; do
     rm ${RFAA_REPO_FOLDER}/rf2aa/config/inference/${filename}.yaml
 done
 
-conda activate microcyto
+conda activate posex

@@ -26,4 +26,4 @@ for fasta_file in ${CHAI_INPUT_FOLDER}/*.fasta; do
     CUDA_VISIBLE_DEVICES=${GPU_ID} chai fold --use-msa-server ${fasta_file} ${output_folder}
 done
 
-conda activate microcyto
+conda activate posex
