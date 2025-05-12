@@ -8,6 +8,10 @@
 
 PoseX is a comprehensive benchmark dataset designed to evaluate molecular docking algorithms for predicting protein-ligand binding poses. It includes the construction process of Self-Docking and Cross-Docking datasets, as well as complete evaluation codes for different docking tools.
 
+[Online Leaderboard](http://116.62.156.219)
+
+[Dataset Repository](https://huggingface.co/datasets/CataAI/PoseX)
+
 ## Contents
 - [PoseX: A Molecular Docking Benchmark](#posex-a-molecular-docking-benchmark)
   - [Contents](#contents)
