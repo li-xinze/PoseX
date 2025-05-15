@@ -4,7 +4,16 @@
 </div>
 <div>&nbsp;</div>
 
-# PoseX: A Molecular Docking Benchmark
+# PoseX: AI Defeats Physics-based Methods on Protein Ligand Cross-Docking
+
+<div align="center">
+
+[![arXiv](https://img.shields.io/badge/arXiv-2505.01700-b31b1b.svg)](https://arxiv.org/abs/2505.01700)
+[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+
+[![Dataset on HF](https://huggingface.co/datasets/huggingface/badges/resolve/main/dataset-on-hf-sm.svg)](https://huggingface.co/datasets/CataAI/PoseX)
+</div>
 
 PoseX is a comprehensive benchmark dataset designed to evaluate molecular docking algorithms for predicting protein-ligand binding poses. It includes the construction process of Self-Docking and Cross-Docking datasets, as well as complete evaluation codes for different docking tools.
 
@@ -13,7 +22,7 @@ PoseX is a comprehensive benchmark dataset designed to evaluate molecular dockin
 [Dataset Repository](https://huggingface.co/datasets/CataAI/PoseX)
 
 ## Contents
-- [PoseX: A Molecular Docking Benchmark](#posex-a-molecular-docking-benchmark)
+- [PoseX: AI Defeats Physics-based Methods on Protein Ligand Cross-Docking](#posex-ai-defeats-physics-based-methods-on-protein-ligand-cross-docking)
   - [Contents](#contents)
   - [Installation](#installation)
   - [Benchmark Data](#benchmark-data)
