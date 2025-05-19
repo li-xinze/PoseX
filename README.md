@@ -75,6 +75,13 @@ pip install -r environments/chai-1.txt
 ```
 
 ## Benchmark Data
+Download `posex_set.zip` and `posex_cif.zip` from [Dataset on HF](https://huggingface.co/datasets/CataAI/PoseX/tree/main)
+```bash
+mkdir data
+unzip posex_set.zip -d data 
+unzip posex_cif.zip -d data
+mv data/posex_set data/dataset
+```
 For information about creating a dataset from scratch, please refer to the data construction [README](./dataset/README.md).
 
 ## Benchmark Pipeline
@@ -143,7 +150,11 @@ bash ./scripts/extract_model_output.sh posex_self_dock alphafold3
 ### 5. Energy Minimization
 
 ```bash
-python -m scripts.relax_model_outputs --input_dir <input_dir> --cif_dir <cif_dir>
+python -m scripts.relax_model_outputs --input_dir <input_dir> --cif_dir data/posex_cif
+
+# --------------- Example --------------- #
+# PoseX Self-Docking (AlphaFold3)
+python -m scripts.relax_model_outputs --input_dir data/benchmark/posex_self_dock/alphafold3/output --cif_dir data/posex_cif
 ```
 
 ### 6. Align Predicted Structures
@@ -171,12 +182,42 @@ bash ./scripts/calculate_benchmark_result.sh posex_self_dock alphafold3 true
 ```
 
 ## Acknowledgements
+| Method                     | Pub. Year    | License            | Paper                    | Code|
+|----------------------------|--------------|--------------------|--------------------------| ----| 
+| **Physics-based methods**  |              |                    |                          |     |
+| Discovery Studio           | late 1990s   | Commercial         |[![](https://img.shields.io/badge/J._Research_Chem.-5291C8?style=flat&logo=Read.cv&labelColor=555555)](https://www.ajrconline.org/AbstractView.aspx?PID=2021-14-1-14)| - |
+| Schrödinger Glide          | 2004         | Commercial         | [![](https://img.shields.io/badge/J_Med_Chem.-5291C8?style=flat&logo=Read.cv&labelColor=555555)](https://pubmed.ncbi.nlm.nih.gov/15027865)| - |
+| MOE                        | 2008         | Commercial         | [![](https://img.shields.io/badge/Curr_Top_Med_Chem.-5291C8?style=flat&logo=Read.cv&labelColor=555555)](https://pubmed.ncbi.nlm.nih.gov/19075767)| - |
+| AutoDock Vina              | 2010, 2021   | Apache-2.0         | [![](https://img.shields.io/badge/J_Chem_Inf_Model.-5291C8?style=flat&logo=Read.cv&labelColor=555555)](https://pubmed.ncbi.nlm.nih.gov/34278794) |[![][github-icon]](https://github.com/ccsb-scripps/AutoDock-Vina)![Stars](https://img.shields.io/github/stars/ccsb-scripps/AutoDock-Vina?color=yellow&style=social) |
+| GNINA                      | 2021         | Apache-2.0         | [![](https://img.shields.io/badge/J_Cheminform.-5291C8?style=flat&logo=Read.cv&labelColor=555555)](https://pubmed.ncbi.nlm.nih.gov/34108002)  |[![][github-icon]](https://github.com/gnina/gnina)![Stars](https://img.shields.io/github/stars/gnina/gnina?color=yellow&style=social) |
+| **AI docking methods**     |              |                    |                          | |
+| DeepDock                   | 2021         | MIT                | [![](https://img.shields.io/badge/ChemRxiv-5291C8?style=flat&logo=Read.cv&labelColor=555555)](https://chemrxiv.org/engage/chemrxiv/article-details/60c757b7337d6cb764e29086) |[![][github-icon]](https://github.com/OptiMaL-PSE-Lab/DeepDock)![Stars](https://img.shields.io/github/stars/OptiMaL-PSE-Lab/DeepDock?color=yellow&style=social) |
+| EquiBind                   | 2022         | MIT                | [![](https://img.shields.io/badge/ICML-5291C8?style=flat&logo=Read.cv&labelColor=555555)](https://proceedings.mlr.press/v162/stark22b/stark22b.pdf) |[![][github-icon]](https://github.com/HannesStark/EquiBind)![Stars](https://img.shields.io/github/stars/HannesStark/EquiBind?color=yellow&style=social) |
+| TankBind                   | 2022         | MIT                | [![](https://img.shields.io/badge/NeurIPS-5291C8?style=flat&logo=Read.cv&labelColor=555555)](https://proceedings.neurips.cc/paper_files/paper/2022/file/2f89a23a19d1617e7fb16d4f7a049ce2-Paper-Conference.pdf) | [![][github-icon]](https://github.com/luwei0917/TankBind)![Stars](https://img.shields.io/github/stars/luwei0917/TankBind?color=yellow&style=social)|
+| DiffDock                   | 2022         | MIT                | [![](https://img.shields.io/badge/ICLR-5291C8?style=flat&logo=Read.cv&labelColor=555555)](https://openreview.net/pdf?id=kKF8_K-mBbS) | [![][github-icon]](https://github.com/gcorso/DiffDock)![Stars](https://img.shields.io/github/stars/gcorso/DiffDock?color=yellow&style=social)|
+| Uni-Mol                    | 2024         | MIT                | [![](https://img.shields.io/badge/arXiv-5291C8?style=flat&logo=Read.cv&labelColor=555555)](https://arxiv.org/abs/2405.11769) | [![][github-icon]](https://github.com/deepmodeling/Uni-Mol/tree/main/unimol_docking_v2)![Stars](https://img.shields.io/github/stars/deepmodeling/Uni-Mol?color=yellow&style=social)|
+| FABind                     | 2023         | MIT                | [![](https://img.shields.io/badge/NeurIPS-5291C8?style=flat&logo=Read.cv&labelColor=555555)](https://openreview.net/pdf?id=PnWakgg1RL) | [![][github-icon]](https://github.com/QizhiPei/FABind)![Stars](https://img.shields.io/github/stars/QizhiPei/FABind?color=yellow&style=social)|
+| DiffDock-L                 | 2024         | MIT                | [![](https://img.shields.io/badge/ICLR-5291C8?style=flat&logo=Read.cv&labelColor=555555)](https://openreview.net/pdf?id=UfBIxpTK10) |[![][github-icon]](https://github.com/gcorso/DiffDock)![Stars](https://img.shields.io/github/stars/gcorso/DiffDock?color=yellow&style=social) |
+| DiffDock-Pocket            | 2024         | MIT                | [![](https://img.shields.io/badge/NeurIPS_workshop-5291C8?style=flat&logo=Read.cv&labelColor=555555)](https://openreview.net/pdf?id=1IaoWBqB6K) | [![][github-icon]](https://github.com/plainerman/DiffDock-Pocket)![Stars](https://img.shields.io/github/stars/plainerman/DiffDock-Pocket?color=yellow&style=social)|
+| DynamicBind                | 2024         | MIT                | [![](https://img.shields.io/badge/Nature_Communications-5291C8?style=flat&logo=Read.cv&labelColor=555555)](https://www.nature.com/articles/s41467-024-45461-2) | [![][github-icon]](https://github.com/luwei0917/DynamicBind)![Stars](https://img.shields.io/github/stars/luwei0917/DynamicBind?color=yellow&style=social)|
+| Interformer                | 2024         | Apache-2.0         | [![](https://img.shields.io/badge/Nature_Communications-5291C8?style=flat&logo=Read.cv&labelColor=555555)](https://www.nature.com/articles/s41467-024-54440-6) |[![][github-icon]](https://github.com/tencent-ailab/Interformer)![Stars](https://img.shields.io/github/stars/tencent-ailab/Interformer?color=yellow&style=social) |
+| SurfDock                   | 2024         | MIT                | [![](https://img.shields.io/badge/Nature_Methods-5291C8?style=flat&logo=Read.cv&labelColor=555555)](https://www.nature.com/articles/s41592-024-02516-y) |[![][github-icon]](https://github.com/CAODH/SurfDock)![Stars](https://img.shields.io/github/stars/CAODH/SurfDock?color=yellow&style=social) |
+| **AI co-folding methods**  |              |                    |                          | | 
+| NeuralPLexer               | 2024         | BSD                | [![](https://img.shields.io/badge/Nature_Machine_Intelligence-5291C8?style=flat&logo=Read.cv&labelColor=555555)](https://arxiv.org/pdf/2209.15171) |[![][github-icon]](https://github.com/zrqiao/NeuralPLexer)![Stars](https://img.shields.io/github/stars/zrqiao/NeuralPLexer?color=yellow&style=social)  |
+| RoseTTAFold-All-Atom       | 2023         | BSD                | [![](https://img.shields.io/badge/Science-5291C8?style=flat&logo=Read.cv&labelColor=555555)](https://pubmed.ncbi.nlm.nih.gov/38452047) |[![][github-icon]](https://github.com/baker-laboratory/RoseTTAFold-All-Atom)![Stars](https://img.shields.io/github/stars/baker-laboratory/RoseTTAFold-All-Atom?color=yellow&style=social)  |
+| AlphaFold3                 | 2024         | CC-BY-NC-SA 4.0    | [![](https://img.shields.io/badge/Nature-5291C8?style=flat&logo=Read.cv&labelColor=555555)](https://pubmed.ncbi.nlm.nih.gov/38718835/) |[![][github-icon]](https://github.com/google-deepmind/alphafold3)![Stars](https://img.shields.io/github/stars/google-deepmind/alphafold3?color=yellow&style=social)  |
+| Chai-1                     | 2024         | Apache-2.0         | [![](https://img.shields.io/badge/bioRxiv-5291C8?style=flat&logo=Read.cv&labelColor=555555)](https://www.biorxiv.org/content/10.1101/2024.10.10.615955v1) |[![][github-icon]](https://github.com/chaidiscovery/chai-lab)![Stars](https://img.shields.io/github/stars/chaidiscovery/chai-lab?color=yellow&style=social)  |
+| Boltz-1                    | 2024         | MIT                | [![](https://img.shields.io/badge/bioRxiv-5291C8?style=flat&logo=Read.cv&labelColor=555555)](https://www.biorxiv.org/content/10.1101/2024.11.19.624167v4) |[![][github-icon]](https://github.com/jwohlwend/boltz)![Stars](https://img.shields.io/github/stars/jwohlwend/boltz?color=yellow&style=social)  |
+| Boltz-1x                   | 2025         | MIT                | [![](https://img.shields.io/badge/bioRxiv-5291C8?style=flat&logo=Read.cv&labelColor=555555)](https://www.biorxiv.org/content/10.1101/2024.11.19.624167v4) |[![][github-icon]](https://github.com/jwohlwend/boltz)![Stars](https://img.shields.io/github/stars/jwohlwend/boltz?color=yellow&style=social)  |
+| Protenix                   | 2025         | Apache-2.0         | [![](https://img.shields.io/badge/bioRxiv-5291C8?style=flat&logo=Read.cv&labelColor=555555)](https://www.biorxiv.org/content/10.1101/2025.01.08.631967v1) |[![][github-icon]](https://github.com/bytedance/Protenix)![Stars](https://img.shields.io/github/stars/bytedance/Protenix?color=yellow&style=social)  |
+
 
 ## License
 - **Code**: Licensed under the [MIT License](https://opensource.org/licenses/MIT). 
 - **Dataset**: Licensed under [Creative Commons Attribution 4.0 International (CC-BY 4.0)](https://creativecommons.org/licenses/by/4.0/). See [PoseX Dataset](https://huggingface.co/datasets/CataAI/PoseX) for details.
 
 
+[github-icon]: https://img.shields.io/badge/code-38C26D?style=flat&logo=GitHub&labelColor=555555
 
 ## Citations
 
