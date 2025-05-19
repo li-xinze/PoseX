@@ -22,16 +22,16 @@ PoseX is a comprehensive benchmark dataset designed to evaluate molecular dockin
 [Dataset Repository](https://huggingface.co/datasets/CataAI/PoseX)
 
 ---
-<div align="center" style="font-size:24px;">
-PoseX Self-Docking Result
+<div align="center">
+<h3>PoseX Self-Docking Result</h3>
 </div>
 <div align="center">
   <img src="figures/posex_self_dock.png"/>
 </div>
 <div>&nbsp;</div>
 
-<div align="center" style="font-size:24px;">
-PoseX Cross-Docking Result
+<div align="center">
+<h3>PoseX Cross-Docking Result</h3>
 </div>
 <div align="center">
   <img src="figures/posex_cross_dock.png"/>
