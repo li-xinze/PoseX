@@ -21,6 +21,23 @@ PoseX is a comprehensive benchmark dataset designed to evaluate molecular dockin
 
 [Dataset Repository](https://huggingface.co/datasets/CataAI/PoseX)
 
+---
+<div align="center" style="font-size:24px;">
+PoseX Self-Docking Result
+</div>
+<div align="center">
+  <img src="figures/posex_self_dock.png"/>
+</div>
+<div>&nbsp;</div>
+
+<div align="center" style="font-size:24px;">
+PoseX Cross-Docking Result
+</div>
+<div align="center">
+  <img src="figures/posex_cross_dock.png"/>
+</div>
+<div>&nbsp;</div>
+
 ## Contents
 - [PoseX: AI Defeats Physics-based Methods on Protein Ligand Cross-Docking](#posex-ai-defeats-physics-based-methods-on-protein-ligand-cross-docking)
   - [Contents](#contents)
