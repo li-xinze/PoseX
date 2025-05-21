@@ -10,6 +10,7 @@ Selection step & Number of proteins  & Number of ligands\\
 \hline 
 PDB entries released from 1 January 2022 to 1 January 2025 feature a refinement resolution of 2 \angstrom~or better and include at least one protein and one ligand  & {{ input.PDB }} & {{ input.CCD }}  \\ 
 Remove unknown ligands (e.g. UNX, UNL) & {{ filter_with_unknown_ccd.PDB }} & {{ filter_with_unknown_ccd.CCD }}  \\ 
+Remove proteins with a sequence length greater than 2000  & {{ filter_with_seq_length.PDB }} & {{ filter_with_seq_length.CCD }}  \\ 
 Ligands weighing from 100 Da to 900 Da & {{ filter_with_molwt.PDB }} & {{ filter_with_molwt.CCD }}  \\ 
 Ligands with at least 3 heavy atoms & {{ filter_with_num_heavy_atom.PDB }} & {{ filter_with_num_heavy_atom.CCD }}  \\ 
 Ligands containing only H, C, O, N, P, S, F, Cl atoms & {{ filter_with_mol_element.PDB }} & {{ filter_with_mol_element.CCD }}  \\ 
@@ -23,11 +24,11 @@ All ligand SDF files can be loaded with RDKit and pass its sanitization & {{ fil
 PDB ligand report does not list stereochemical errors & {{ filter_with_stereo_outliers.PDB }} & {{ filter_with_stereo_outliers.CCD }}  \\ 
 PDB ligand report does not list any atomic clashes  & {{ filter_with_intermolecular_clashes.PDB }} & {{ filter_with_intermolecular_clashes.CCD }}  \\ 
 Select single protein-ligand conformation \tnote{1} & {{ select_single_conformation.PDB }} & {{ select_single_conformation.CCD }}  \\ 
-Intermolecular distance between the ligand(s) and the protein is at least 0.2 \angstrom & {{ filter_with_lignad_protein_distance.PDB }} & {{ filter_with_lignad_protein_distance.CCD }}  \\
-Intermolecular distance between the ligand(s) and the other ligands is at least 5.0 \angstrom & {{ filter_with_lignad_ligand_distance.PDB }} & {{ filter_with_lignad_ligand_distance.CCD }}  \\
-Remove ligands which are within 5.0 \angstrom~of any protein symmetry mate & {{ filter_crystal_contact.PDB }} & {{ filter_crystal_contact.CCD }} \\
+Intermolecular distance between the ligand(s) and the protein is at least 0.2 \angstrom & {{ filter_with_ligand_protein_distance.PDB }} & {{ filter_with_ligand_protein_distance.CCD }}  \\
+Intermolecular distance between the ligand(s) and the other ligands is at least 5.0 \angstrom & {{ filter_with_ligand_ligand_distance.PDB }} & {{ filter_with_ligand_ligand_distance.CCD }}  \\
+Remove ligands which are within 5.0 \angstrom~of any protein symmetry mate & {{ filter_with_crystal_contact.PDB }} & {{ filter_with_crystal_contact.CCD }} \\
 Cluster proteins that have at least 90\% sequence identity \tnote{2}  & {{ filter_with_clustering.PDB }} & {{ filter_with_clustering.CCD }} \\
-Structures can be successfully  alinged to the reference structure in each cluster \tnote{3} & {{ filter_with_cross_alignment.PDB }} & {{ filter_with_cross_alignment.CCD }} \\
+Structures can be successfully alinged to the reference structure in each cluster \tnote{3} & {{ filter_with_cross_alignment.PDB }} & {{ filter_with_cross_alignment.CCD }} \\
 \bottomrule[1pt]
 \end{tabular}
 \begin{tablenotes}

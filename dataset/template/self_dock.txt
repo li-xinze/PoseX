@@ -10,6 +10,7 @@ Selection step & Number of proteins  & Number of ligands\\
 \hline 
 PDB entries released from 1 January 2022 to 1 January 2025 feature a refinement resolution of 2 \angstrom~or better and include at least one protein and one ligand  & {{ input.PDB }} & {{ input.CCD }}  \\ 
 Remove unknown ligands (e.g. UNX, UNL) & {{ filter_with_unknown_ccd.PDB }} & {{ filter_with_unknown_ccd.CCD }}  \\ 
+Remove proteins with a sequence length greater than 2000  & {{ filter_with_seq_length.PDB }} & {{ filter_with_seq_length.CCD }}  \\ 
 Ligands weighing from 100 Da to 900 Da & {{ filter_with_molwt.PDB }} & {{ filter_with_molwt.CCD }}  \\ 
 Ligands with at least 3 heavy atoms & {{ filter_with_num_heavy_atom.PDB }} & {{ filter_with_num_heavy_atom.CCD }}  \\ 
 Ligands containing only H, C, O, N, P, S, F, Cl atoms & {{ filter_with_mol_element.PDB }} & {{ filter_with_mol_element.CCD }}  \\ 
@@ -23,12 +24,11 @@ All ligand SDF files can be loaded with RDKit and pass its sanitization & {{ fil
 PDB ligand report does not list stereochemical errors & {{ filter_with_stereo_outliers.PDB }} & {{ filter_with_stereo_outliers.CCD }}  \\ 
 PDB ligand report does not list any atomic clashes  & {{ filter_with_intermolecular_clashes.PDB }} & {{ filter_with_intermolecular_clashes.CCD }}  \\ 
 Select single protein-ligand conformation \tnote{1} & {{ select_single_conformation.PDB }} & {{ select_single_conformation.CCD }}  \\ 
-Intermolecular distance between the ligand(s) and the protein is at least 0.2 \angstrom & {{ filter_with_lignad_protein_distance.PDB }} & {{ filter_with_lignad_protein_distance.CCD }}  \\
-Intermolecular distance between ligand(s) and other small organic molecules is at least 0.2 \angstrom & {{ filter_with_lignad_organic_molecule_distance.PDB }} & {{ filter_with_lignad_organic_molecule_distance.CCD }}  \\
-Intermolecular distance between ligand(s) and ion metals in complex is at least 0.2 \angstrom & {{ filter_with_lignad_metal_ion_distance.PDB }} & {{ filter_with_lignad_metal_ion_distance.CCD }}  \\
-Remove ligands which are within 5.0 \angstrom~of any protein symmetry mate  & {{ filter_crystal_contact.PDB }} & {{ filter_crystal_contact.CCD }} \\
-Randomly select PDB entries to get a set with unique ligands  & {{ filter_with_unique_ccd.PDB }} & {{ filter_with_unique_ccd.CCD }} \\
-Randomly select ligands to get a set with unique PDB entries  & {{ filter_with_unique_pdb.PDB }} & {{ filter_with_unique_pdb.CCD }} \\
+Intermolecular distance between the ligand(s) and the protein is at least 0.2 \angstrom & {{ filter_with_ligand_protein_distance.PDB }} & {{ filter_with_ligand_protein_distance.CCD }}  \\
+Intermolecular distance between ligand(s) and other small organic molecules is at least 0.2 \angstrom & {{ filter_with_ligand_organic_molecule_distance.PDB }} & {{ filter_with_ligand_organic_molecule_distance.CCD }}  \\
+Intermolecular distance between ligand(s) and ion metals in complex is at least 0.2 \angstrom & {{ filter_with_ligand_metal_ion_distance.PDB }} & {{ filter_with_ligand_metal_ion_distance.CCD }}  \\
+Remove ligands which are within 5.0 \angstrom~of any protein symmetry mate  & {{ filter_with_crystal_contact.PDB }} & {{ filter_with_crystal_contact.CCD }} \\
+Get a set with unique pdbs and unique ccds by Hopcroft–Karp matching algorithm  & {{ filter_with_unique_pdb_ccd.PDB }} & {{ filter_with_unique_pdb_ccd.CCD }} \\
 Select representative PDB entries by clustering protein sequences  & {{ filter_with_clustering.PDB }} & {{ filter_with_clustering.CCD }} \\
 \bottomrule[1pt]
 \end{tabular}
