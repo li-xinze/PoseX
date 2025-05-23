@@ -386,12 +386,11 @@ def get_covalent_ligands(inputs: tuple[str, set], cif_dir: str) -> tuple[str, li
     pdbid, ccds = inputs
     cif_path = os.path.join(cif_dir, f"{pdbid}.cif")
     def search_asym_id(cif_data, entity_id):
-        asym_id = []
+        asym_ids = []
         if '_struct_asym' in cif_data:
             for r in cif_data._struct_asym.search('entity_id',entity_id).values():
-                asym_id.append(r['id'])
-            asym_id = ','.join(asym_id)
-        return asym_id
+                asym_ids.append(r['id'])
+        return set(asym_ids)
     
     cfr = CifFileReader()
     cif_obj = cfr.read(cif_path, output = 'cif_wrapper', ignore = ['_atom_site']) 
@@ -400,9 +399,9 @@ def get_covalent_ligands(inputs: tuple[str, set], cif_dir: str) -> tuple[str, li
     ligands_with_covalent_bond = []
     entity = cif_data['_entity']
     for entity_id, entity_type in zip(entity['id'], entity['type']):
-        asym_id = search_asym_id(cif_data, entity_id)
+        asym_ids = search_asym_id(cif_data, entity_id)
         if entity_type == 'polymer': 
-            polymer_chain_set.add(asym_id)
+            polymer_chain_set |= asym_ids
 
     if '_struct_conn' in cif_data:
         for r in cif_data._struct_conn.search('conn_type_id', 'covale').values():
