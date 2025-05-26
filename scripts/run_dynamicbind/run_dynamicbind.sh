@@ -10,8 +10,8 @@ fi
 
 DATASET="$1"
 DYNAMICBIND_EXEC_FOLDER="path/to/DynamicBind"
-DYNAMICBIND_INPUT_FOLDER=$(readlink -f "data/microcyto/${DATASET}/dynamicbind/input")
-DYNAMICBIND_OUTPUT_FOLDER=$(readlink -f "data/microcyto/${DATASET}/dynamicbind/output")
+DYNAMICBIND_INPUT_FOLDER="${PWD}/data/benchmark/${DATASET}/dynamicbind/input")
+DYNAMICBIND_OUTPUT_FOLDER="${PWD}/data/benchmark/${DATASET}/dynamicbind/output")
 GPU_ID=1
 
 # init conda
@@ -31,5 +31,3 @@ for protein_filepath in ${DYNAMICBIND_INPUT_FOLDER}/*.pdb; do
         --output_dir ${output_folder} \
         --gpu_id ${GPU_ID}
 done
-
-conda activate microcyto

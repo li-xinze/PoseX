@@ -12,8 +12,8 @@ DATASET="$1"
 DIFFDOCK_EXEC_FOLDER="path/to/DiffDock"
 MODEL_DIR="${DIFFDOCK_EXEC_FOLDER}/workdir/paper_score_model"
 CONFIDENCE_MODEL_DIR="${DIFFDOCK_EXEC_FOLDER}/workdir/paper_confidence_model"
-DIFFDOCK_INPUT_FOLDER=$(readlink -f "data/microcyto/${DATASET}/diffdock/input")
-DIFFDOCK_OUTPUT_FOLDER=$(readlink -f "data/microcyto/${DATASET}/diffdock/output")
+DIFFDOCK_INPUT_FOLDER="${PWD}/data/benchmark/${DATASET}/diffdock/input")
+DIFFDOCK_OUTPUT_FOLDER="${PWD}/data/benchmark/${DATASET}/diffdock/output")
 GPU_ID=1
 
 # init conda
@@ -28,5 +28,3 @@ python scripts/run_diffdock/run_diffdock.py \
     --diffdock_exec_dir ${DIFFDOCK_EXEC_FOLDER} \
     --model_dir ${MODEL_DIR} \
     --confidence_model_dir ${CONFIDENCE_MODEL_DIR}
-
-conda activate microcyto

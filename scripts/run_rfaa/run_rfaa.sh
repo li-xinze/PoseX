@@ -21,7 +21,7 @@ mkdir -p ${RFAA_OUTPUT_FOLDER}
 eval "$(conda shell.bash hook)"
 conda activate rfaa
 
-RFAA_REPO_FOLDER="/home/jiangyize/workspace/github/RoseTTAFold-All-Atom/"
+RFAA_REPO_FOLDER="path/to/RFAA"
 
 for yaml_file in ${RFAA_INPUT_FOLDER}/*.yaml; do
     filename=$(basename "${yaml_file}" .yaml)
