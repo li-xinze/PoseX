@@ -11,8 +11,8 @@ fi
 DATASET="$1"
 FABIND_EXEC_FOLDER="path/to/fabind"
 CKPT_PATH="${FABIND_EXEC_FOLDER}/ckpt/best_model.bin"
-FABIND_INPUT_FOLDER=$(readlink -f "data/microcyto/${DATASET}/fabind/input")
-FABIND_OUTPUT_FOLDER=$(readlink -f "data/microcyto/${DATASET}/fabind/output")
+FABIND_INPUT_FOLDER="${PWD}/data/benchmark/${DATASET}/fabind/input")
+FABIND_OUTPUT_FOLDER="${PWD}/data/benchmark/${DATASET}/fabind/output")
 GPU_ID=0
 
 # init conda
@@ -29,5 +29,3 @@ python scripts/run_fabind/run_fabind.py \
     --fabind_exec_dir ${FABIND_EXEC_FOLDER} \
     --ckpt_path ${CKPT_PATH} \
     --gpu_id ${GPU_ID}
-
-conda activate microcyto

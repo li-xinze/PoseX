@@ -10,8 +10,8 @@ fi
 
 DATASET="$1"
 DIFFDOCK_EXEC_FOLDER="path/to/DiffDock_L"
-DIFFDOCK_INPUT_FOLDER=$(readlink -f "data/microcyto/${DATASET}/diffdock_l/input")
-DIFFDOCK_OUTPUT_FOLDER=$(readlink -f "data/microcyto/${DATASET}/diffdock_l/output")
+DIFFDOCK_INPUT_FOLDER="${PWD}/data/benchmark/${DATASET}/diffdock_l/input")
+DIFFDOCK_OUTPUT_FOLDER="${PWD}/data/benchmark/${DATASET}/diffdock_l/output")
 
 
 # init conda
@@ -25,5 +25,3 @@ python scripts/run_diffdock_l/run_diffdock_l.py \
     --config_path ${config_path} \
     --output_dir ${DIFFDOCK_OUTPUT_FOLDER} \
     --diffdock_exec_dir ${DIFFDOCK_EXEC_FOLDER}
-
-conda activate microcyto

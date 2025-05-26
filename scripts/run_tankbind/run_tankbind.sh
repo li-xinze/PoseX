@@ -10,8 +10,8 @@ fi
 
 DATASET="$1"
 TANKBIND_EXEC_FOLDER="path/to/TankBind"
-TANKBIND_INPUT_FOLDER="data/microcyto/${DATASET}/tankbind/input"
-TANKBIND_OUTPUT_FOLDER="data/microcyto/${DATASET}/tankbind/output"
+TANKBIND_INPUT_FOLDER="${PWD}/data/benchmark/${DATASET}/tankbind/input"
+TANKBIND_OUTPUT_FOLDER="${PWD}data/benchmark/${DATASET}/tankbind/output"
 GPU_ID=0
 
 # init conda
@@ -25,5 +25,3 @@ python scripts/run_tankbind/run_tankbind.py \
     --input_dir ${TANKBIND_INPUT_FOLDER} \
     --output_dir ${TANKBIND_OUTPUT_FOLDER} \
     --gpu_id ${GPU_ID}
-
-conda activate microcyto
