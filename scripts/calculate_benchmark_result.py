@@ -82,7 +82,7 @@ def main(args: argparse.Namespace):
     save_folder = os.path.dirname(args.input_file)
 
     # Calculate posebusters result
-    buster = PoseBusters(config="redock", top_n=None)
+    buster = PoseBusters(config="redock", top_n=None, max_workers=None)
     buster.config["loading"]["mol_true"]["load_all"] = True
     bust_results = buster.bust_table(bust_data, full_report=True)
     bust_results["PDB_CCD_ID"] = bust_dict["PDB_CCD_ID"]
