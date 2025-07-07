@@ -180,6 +180,7 @@ bash ./scripts/calculate_benchmark_result.sh <dataset> <model_type> <relax_mode>
 # PoseX Self-Docking (AlphaFold3) (Using Relax)
 bash ./scripts/calculate_benchmark_result.sh posex_self_dock alphafold3 true
 ```
+We provide the results [here](https://drive.google.com/drive/folders/16fqsisTEk4TdmZ-RfZNk14gG1vtLcnxh?usp=share_link).
 
 ## Acknowledgements
 | Method                     | Pub. Year    | License            | Paper                    | Code|
